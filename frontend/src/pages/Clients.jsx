@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { io } from 'socket.io-client';
 import { Plus, Search, Phone, Clock, MoreVertical, AlertCircle, RefreshCw, UserX, ChevronRight, Edit2, Trash2, Eye, Calendar, MessageCircle, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useApi from '../hooks/useApi';
@@ -113,7 +114,29 @@ const Clients = () => {
     return () => clearTimeout(handler);
   }, [search]);
 
-  const { data: clients, loading, error, refetch } = useApi(fetchClients, { interval: 60_000 });
+  const { data: clientsRaw, loading, error, refetch } = useApi(fetchClients, { interval: 60_000 });
+
+  // Estado local espelhado — permite patches em tempo real sem refetch completo
+  const [clients, setClients] = useState([]);
+
+  useEffect(() => {
+    if (clientsRaw) setClients(clientsRaw);
+  }, [clientsRaw]);
+
+  // Socket.io — atualiza status do cliente em tempo real
+  useEffect(() => {
+    const socket = io('https://agente-backend.amxxqr.easypanel.host');
+
+    socket.on('client_status_updated', (updatedClient) => {
+      setClients((prev) =>
+        prev.map((c) =>
+          c.id === updatedClient.id ? { ...c, ...updatedClient } : c
+        )
+      );
+    });
+
+    return () => socket.disconnect();
+  }, []);
 
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {

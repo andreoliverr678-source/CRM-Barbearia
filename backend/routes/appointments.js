@@ -39,6 +39,40 @@ const mapToBackend = (a) => {
   return data;
 };
 
+// ── Helper: atualiza status do cliente e emite evento realtime ───────────────
+const emitClientStatusUpdate = async (io, telefone) => {
+  if (!io || !telefone) return;
+  try {
+    // Chama a função SQL que recalcula e persiste o novo status
+    await supabase.rpc('atualizar_status_cliente', { p_telefone: telefone });
+
+    // Busca o cliente atualizado para enviar ao frontend
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('id, nome, telefone, status, score, observacoes, criado_em, ultima_interacao, ultimo_atendimento, reativacao_enviada')
+      .or(`telefone.eq.${telefone}`)
+      .single();
+
+    if (cliente) {
+      io.emit('client_status_updated', {
+        id:                  cliente.id,
+        name:                cliente.nome,
+        phone:               cliente.telefone,
+        status:              cliente.status,
+        score:               cliente.score || 0,
+        notes:               cliente.observacoes,
+        created_at:          cliente.criado_em,
+        ultima_interacao:    cliente.ultima_interacao,
+        ultimo_atendimento:  cliente.ultimo_atendimento,
+        reativacao_enviada:  cliente.reativacao_enviada || false,
+      });
+    }
+  } catch (err) {
+    console.error('[appointments] Erro ao emitir status do cliente:', err.message);
+  }
+};
+
+
 // ── GET /api/appointments ────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
@@ -120,7 +154,11 @@ router.post('/', async (req, res) => {
 
     // Emite evento realtime
     const io = req.app.get('io');
-    if (io) io.emit('appointment_created', mapToFrontend(data));
+    if (io) {
+      io.emit('appointment_created', mapToFrontend(data));
+      // Atualiza status do cliente em tempo real
+      await emitClientStatusUpdate(io, data.telefone);
+    }
 
     res.status(201).json(mapToFrontend(data));
   } catch (err) {
@@ -170,6 +208,9 @@ router.put('/:id', async (req, res) => {
       if (data.status === 'concluido') {
         io.emit('appointment_concluido', mapToFrontend(data));
       }
+
+      // Atualiza status do cliente em tempo real
+      await emitClientStatusUpdate(io, data.telefone);
     }
 
     res.json(mapToFrontend(data));
@@ -182,6 +223,13 @@ router.put('/:id', async (req, res) => {
 // ── DELETE /api/appointments/:id ─────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
   try {
+    // Busca o telefone ANTES de deletar para atualizar o status do cliente depois
+    const { data: apptToDelete } = await supabase
+      .from('agendamentos')
+      .select('telefone')
+      .eq('id', req.params.id)
+      .single();
+
     const { error } = await supabase
       .from('agendamentos')
       .delete()
@@ -193,7 +241,11 @@ router.delete('/:id', async (req, res) => {
     }
 
     const io = req.app.get('io');
-    if (io) io.emit('appointment_deleted', { id: req.params.id });
+    if (io) {
+      io.emit('appointment_deleted', { id: req.params.id });
+      // Atualiza status do cliente em tempo real
+      await emitClientStatusUpdate(io, apptToDelete?.telefone);
+    }
 
     res.json({ message: 'Agendamento excluído com sucesso' });
   } catch (err) {
