@@ -25,6 +25,7 @@ const profileRouter = require('./routes/profile');
 const dashboardRouter = require('./routes/dashboard');
 const financialRouter = require('./routes/financial');
 const servicesRouter  = require('./routes/services');
+const { iniciarScheduler } = require('./scheduler');
 
 app.use('/api/clients', clientsRouter);
 app.use('/api/appointments', appointmentsRouter);
@@ -62,4 +63,5 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Servidor rodando na porta ${port}`);
   console.log(`🔗 Supabase URL: ${process.env.SUPABASE_URL}`);
   console.log(`🔌 Socket.io iniciado`);
+  iniciarScheduler();
 });

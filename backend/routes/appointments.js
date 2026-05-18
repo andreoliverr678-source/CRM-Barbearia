@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db');
+const { cancelarAgendamentosVencidos } = require('../scheduler');
+
 
 // ── Adapter (Banco PT-BR <-> Frontend EN) ────────────────────────────────────
 const mapToFrontend = (a) => ({
@@ -40,6 +42,9 @@ const mapToBackend = (a) => {
 // ── GET /api/appointments ────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
+    // Cancela agendamentos pendentes vencidos antes de retornar a lista
+    await cancelarAgendamentosVencidos();
+
     const { data, error } = await supabase
       .from('agendamentos')
       .select('*')
