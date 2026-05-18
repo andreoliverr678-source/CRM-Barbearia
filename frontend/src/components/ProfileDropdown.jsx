@@ -24,13 +24,32 @@ const ProfileDropdown = () => {
   const [avatarFile, setAvatarFile] = useState(null);       // File object
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // Sincroniza estado quando user carrega
+  // Sincroniza estado quando user muda (login/logout/troca de conta)
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setBarbershopName(user.barbershop_name || '');
     }
-  }, [user]);
+    // Fecha o modal sempre que o usuário mudar (deslogar e re-logar
+    // não desmonta o componente, então o estado precisa ser resetado)
+    setIsModalOpen(false);
+    setIsOpen(false);
+    setMessage('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setAvatarPreview(null);
+    setAvatarFile(null);
+  }, [user?.id]); // Reage apenas à mudança de identidade, não a updates de campos
+
+  // Trava o scroll do body enquanto o modal está aberto e libera ao fechar
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isModalOpen]);
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
