@@ -2,7 +2,21 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
 const authMiddleware = require('../middleware/auth');
+
+// Multer: armazena em memória (buffer), limita a 2MB
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error('Tipo de arquivo não permitido. Use JPG, PNG, WebP ou GIF.'));
+    }
+    cb(null, true);
+  },
+});
 
 // GET /api/profile -> Obtém dados do usuário (também coberto por /api/auth/me)
 router.get('/', authMiddleware, async (req, res) => {
@@ -93,6 +107,58 @@ router.put('/password', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[PROFILE] Erro inesperado ao trocar senha:', err.message);
     res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// POST /api/profile/avatar -> Upload de avatar para o Supabase Storage
+router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+    }
+
+    const userId = req.user.id;
+    const ext = req.file.mimetype.split('/')[1].replace('jpeg', 'jpg');
+    const filePath = `${userId}.${ext}`;
+
+    // Remove arquivo anterior (ignora erro se não existir)
+    await supabase.storage.from('avatars').remove([filePath]);
+
+    // Faz upload do novo arquivo
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('[PROFILE] Erro no upload do avatar:', uploadError.message);
+      return res.status(500).json({ error: 'Erro ao fazer upload do avatar.' });
+    }
+
+    // Obtém URL pública
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    // Salva a URL no perfil do usuário
+    const { data, error: updateError } = await supabase
+      .from('users')
+      .update({ avatar: publicUrl })
+      .eq('id', userId)
+      .select('id, name, email, avatar, barbershop_name')
+      .single();
+
+    if (updateError) {
+      console.error('[PROFILE] Erro ao salvar URL do avatar:', updateError.message);
+      return res.status(500).json({ error: 'Avatar salvo, mas erro ao atualizar perfil.' });
+    }
+
+    res.json({ avatar: publicUrl, user: data });
+  } catch (err) {
+    console.error('[PROFILE] Erro inesperado no upload:', err.message);
+    res.status(500).json({ error: err.message || 'Erro interno' });
   }
 });
 

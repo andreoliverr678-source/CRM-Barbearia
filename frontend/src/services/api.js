@@ -96,6 +96,13 @@ export const fetchMe      = ()                 => api.get('/auth/me');
 export const fetchProfile   = ()     => api.get('/profile');
 export const updateProfile  = (data) => api.put('/profile', data);
 export const changePassword = (data) => api.put('/profile/password', data);
+export const uploadAvatar   = (file) => {
+  const form = new FormData();
+  form.append('avatar', file);
+  return api.post('/profile/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 export const fetchNotifications       = ()   => api.get('/notifications');
