@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Settings, Building, Mail, User, ShieldCheck, Camera, Loader2 } from 'lucide-react';
 import api, { uploadAvatar } from '../services/api';
@@ -168,8 +169,9 @@ const ProfileDropdown = () => {
         )}
       </div>
 
-      {/* Modal Edição Perfil */}
-      {isModalOpen && (
+      {/* Modal Edição Perfil — renderizado via Portal no document.body
+           para escapar do stacking context criado pelo backdrop-blur da Topbar */}
+      {isModalOpen && createPortal(
         <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
           {/* Wrapper de centralização — garante distância segura do topo/fundo */}
           <div className="flex min-h-full items-center justify-center p-4 py-8">
@@ -323,7 +325,7 @@ const ProfileDropdown = () => {
           </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 };
