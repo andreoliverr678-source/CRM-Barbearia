@@ -170,9 +170,11 @@ const ProfileDropdown = () => {
 
       {/* Modal Edição Perfil */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="glass-panel w-full max-w-md bg-white dark:bg-dark-900 rounded-3xl overflow-hidden shadow-2xl relative">
-            <div className="p-6">
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
+          {/* Wrapper de centralização — garante distância segura do topo/fundo */}
+          <div className="flex min-h-full items-center justify-center p-4 py-8">
+          <div className="glass-panel w-full max-w-md bg-white dark:bg-dark-900 rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
               <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-6">Configurações</h2>
 
               <div className="space-y-4">
@@ -318,6 +320,7 @@ const ProfileDropdown = () => {
                 </button>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}
