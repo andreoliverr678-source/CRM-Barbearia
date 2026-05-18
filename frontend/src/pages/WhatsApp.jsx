@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, CheckCheck, AlertCircle, RefreshCw, MessageCircleOff, ArrowLeft } from 'lucide-react';
+import { Search, CheckCheck, AlertCircle, RefreshCw, MessageCircleOff, ArrowLeft, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { io } from 'socket.io-client';
 import useApi from '../hooks/useApi';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { fetchMessages, sendChatMessage, fetchClients } from '../services/api';
+import { fetchMessages, fetchClients } from '../services/api';
 
 // ------- Helpers -------
 const formatTime = (dateStr) => {
@@ -24,11 +24,9 @@ const groupByPhone = (messages, clientsData = []) => {
   });
   return Array.from(map.entries())
     .map(([phone, msgs]) => {
-      // Normaliza o telefone para comparação (remove não numéricos)
       const rawPhone = phone.replace(/\D/g, '');
       const client = clientsData.find(c => c.phone?.replace(/\D/g, '') === rawPhone);
       const name = client?.name || null;
-
       return {
         phone,
         clientName: name,
@@ -38,7 +36,6 @@ const groupByPhone = (messages, clientsData = []) => {
       };
     })
     .sort((a, b) => {
-      // Ordena a lista de conversas pela mais recente
       if (!a.lastMsg || !b.lastMsg) return 0;
       return new Date(b.lastMsg.created_at) - new Date(a.lastMsg.created_at);
     });
@@ -62,24 +59,19 @@ const ConvSkeleton = () => (
   </div>
 );
 
-// ------- WhatsApp Page -------
+// ------- WhatsApp Page (somente leitura) -------
 const WhatsApp = () => {
   const { isMobile } = useMediaQuery();
 
-  // 'list' = tela de conversas | 'chat' = tela de chat (mobile only)
   const [mobileView, setMobileView] = useState('list');
   const [selectedPhone, setSelectedPhone] = useState(null);
-  const [inputText, setInputText] = useState('');
-  const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [messagesData, setMessagesData] = useState([]);
-  const [isTyping, setIsTyping] = useState(false); // Fake typing indicator
   const messagesEndRef = useRef(null);
 
   const { data: initialMessages, loading, error, refetch: refetchMsgs } = useApi(fetchMessages);
   const { data: clientsData, refetch: refetchClients } = useApi(fetchClients);
 
-  // Load initial data
   useEffect(() => {
     if (initialMessages) setMessagesData(initialMessages);
   }, [initialMessages]);
@@ -89,26 +81,16 @@ const WhatsApp = () => {
     refetchClients();
   };
 
-  // Real-time via Socket.io
+  // Real-time via Socket.io — só leitura, apenas recebe mensagens novas
   useEffect(() => {
     const socket = io('https://agente-backend.amxxqr.easypanel.host');
-    
     socket.on('connect', () => console.log('Socket.io connected (Realtime WhatsApp)'));
-    
     socket.on('new_message', (msg) => {
-      // Add the new message to our local state instantly
       setMessagesData((prev) => {
-        // Prevents duplicate messages if we already pushed it locally
         if (prev.find(m => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
-
-      // Se a IA responder, podemos simular o fim do typing
-      if (msg.sender === 'ai') {
-        setIsTyping(false);
-      }
     });
-
     return () => socket.disconnect();
   }, []);
 
@@ -136,7 +118,7 @@ const WhatsApp = () => {
   // Scroll automático ao fundo quando chegam mensagens
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConversation?.messages, isTyping]);
+  }, [activeConversation?.messages]);
 
   const handleSelectConversation = (phone) => {
     setSelectedPhone(phone);
@@ -148,56 +130,11 @@ const WhatsApp = () => {
     setSelectedPhone(null);
   };
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || !selectedPhone) return;
-    
-    const messageContent = inputText.trim();
-    setInputText('');
-    setSending(true);
-
-    try {
-      // Optimistic update
-      const tempId = `temp-${Date.now()}`;
-      setMessagesData(prev => [...prev, {
-        id: tempId,
-        phone: selectedPhone,
-        message: messageContent,
-        sender: 'admin',
-        created_at: new Date().toISOString()
-      }]);
-
-      const savedMsg = await sendChatMessage({
-        phone: selectedPhone,
-        message: messageContent
-      });
-
-      // Replace temp message with real one
-      setMessagesData(prev => prev.map(m => m.id === tempId ? savedMsg : m));
-
-      // Simulate typing if we expect the AI to answer
-      setIsTyping(true);
-      setTimeout(() => setIsTyping(false), 3000); // Failsafe se a IA demorar
-
-    } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
-      // Remove temp message if failed
-      setMessagesData(prev => prev.filter(m => m.message !== messageContent && m.sender === 'admin'));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  // ======================================================
-  // MOBILE: mostra só lista OU só chat (full screen)
-  // DESKTOP: side-by-side
-  // ======================================================
   const showList = !isMobile || mobileView === 'list';
   const showChat = !isMobile || mobileView === 'chat';
 
   return (
     <div className="animate-fade-in -mx-4 md:mx-0 -mt-4 md:mt-0">
-      {/* Container principal */}
       <div
         className="flex gap-0 md:gap-6"
         style={{ height: 'calc(100dvh - 3.5rem)' }}
@@ -208,9 +145,16 @@ const WhatsApp = () => {
             {/* Header da lista */}
             <div className="p-4 border-b border-dark-200 dark:border-dark-800 shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-bold text-dark-900 dark:text-white">WhatsApp</h2>
                 <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 relative mr-2">
+                  <h2 className="text-lg font-bold text-dark-900 dark:text-white">Mensagens</h2>
+                  {/* Badge somente leitura */}
+                  <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-dark-100 dark:bg-dark-800 text-dark-400 dark:text-dark-500 border border-dark-200 dark:border-dark-700 select-none">
+                    <Eye size={10} />
+                    Somente leitura
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative mr-1">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
@@ -266,7 +210,6 @@ const WhatsApp = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        {/* Avatar */}
                         <div className="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold shrink-0 text-sm shadow-sm">
                           {conv.clientName ? conv.clientName.charAt(0).toUpperCase() : (conv.phone || '?').charAt(0)}
                         </div>
@@ -297,15 +240,14 @@ const WhatsApp = () => {
           </div>
         )}
 
-        {/* ====== COLUNA DIREITA: área de chat ====== */}
+        {/* ====== COLUNA DIREITA: área de visualização ====== */}
         {showChat && (
           <div className={`${isMobile ? 'w-full' : 'flex-1'} glass-panel md:rounded-2xl flex flex-col overflow-hidden relative bg-[url('https://i.pinimg.com/1200x/8c/98/99/8c98994518b575bfd8c949e91d20548b.jpg')] bg-cover bg-center before:content-[''] before:absolute before:inset-0 before:bg-white/90 dark:before:bg-dark-900/90 before:backdrop-blur-sm`}>
-            
+
             {/* Header do chat */}
             <div className="h-14 md:h-16 border-b border-dark-200 dark:border-dark-800 bg-white/70 dark:bg-dark-900/70 px-4 md:px-6 flex items-center gap-3 shrink-0 relative z-10 backdrop-blur-md">
-              {/* Botão voltar — só mobile */}
               {isMobile && (
-               <button
+                <button
                   onClick={handleBack}
                   className="p-2 -ml-1 rounded-xl text-dark-500 hover:bg-dark-100 dark:text-dark-400 dark:hover:bg-dark-800 transition-colors"
                   aria-label="Voltar para lista"
@@ -323,8 +265,9 @@ const WhatsApp = () => {
                     <h2 className="font-bold text-dark-900 dark:text-white text-sm truncate leading-tight">
                       {activeConversation.clientName ? activeConversation.clientName : activeConversation.phone}
                     </h2>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      Online {activeConversation.clientName && <span className="text-dark-400 font-normal ml-1">• {activeConversation.phone}</span>}
+                    <p className="text-[11px] text-dark-400 font-medium">
+                      {activeConversation.clientName && <span>{activeConversation.phone} • </span>}
+                      {activeConversation.messages.length} mensagem{activeConversation.messages.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
@@ -333,7 +276,7 @@ const WhatsApp = () => {
               )}
             </div>
 
-            {/* Mensagens */}
+            {/* Mensagens — somente leitura */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 relative z-10 custom-scrollbar">
               {loading && messagesData.length === 0 ? (
                 <>
@@ -346,14 +289,14 @@ const WhatsApp = () => {
                 <div className="h-full flex items-center justify-center text-dark-400">
                   <div className="text-center px-6 bg-white/50 dark:bg-dark-800/50 p-6 rounded-3xl backdrop-blur-md shadow-sm">
                     <MessageCircleOff size={36} className="mx-auto mb-3 opacity-60" />
-                    <p className="text-sm font-medium">Selecione uma conversa para visualizar o histórico realtime</p>
+                    <p className="text-sm font-medium">Selecione uma conversa para visualizar o histórico</p>
                   </div>
                 </div>
               ) : (
                 activeConversation.messages.map((msg) => {
                   const isOut = msg.sender === 'admin' || msg.sender === 'ai';
                   const isAi = msg.sender === 'ai';
-                  
+
                   return (
                     <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative ${
@@ -376,46 +319,16 @@ const WhatsApp = () => {
                   );
                 })
               )}
-              
-              {/* Indicador digitando */}
-              {isTyping && activeConversation && (
-                <div className="flex justify-start animate-fade-in">
-                  <div className="bg-white dark:bg-dark-800 border border-dark-100 dark:border-dark-700 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm w-fit">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 bg-dark-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-1.5 h-1.5 bg-dark-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-1.5 h-1.5 bg-dark-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-              
+
               <div ref={messagesEndRef} className="h-1" />
             </div>
 
-            {/* Input fixo */}
+            {/* Rodapé somente leitura */}
             <div className="p-3 md:p-4 bg-white/70 dark:bg-dark-900/70 backdrop-blur-xl border-t border-dark-200 dark:border-dark-800 shrink-0 safe-area-bottom relative z-10">
-              <form onSubmit={handleSend} className="flex gap-2 md:gap-3">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder={selectedPhone ? 'Digite uma mensagem (envio real via API)...' : 'Selecione uma conversa primeiro'}
-                  disabled={!selectedPhone || sending}
-                  className="flex-1 bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 shadow-inner rounded-xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-emerald-500 text-dark-900 dark:text-dark-100 placeholder-dark-400 disabled:opacity-50 transition-shadow"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputText.trim() || !selectedPhone || sending}
-                  className="w-[52px] h-[52px] bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors shadow-xl shadow-emerald-500/20 active:scale-95 shrink-0"
-                >
-                  {sending ? (
-                    <RefreshCw size={18} className="animate-spin" />
-                  ) : (
-                    <Send size={18} className="ml-1" />
-                  )}
-                </button>
-              </form>
+              <div className="flex items-center justify-center gap-2 text-dark-400 dark:text-dark-500 text-xs py-1 select-none">
+                <Eye size={13} />
+                <span>Visualização somente leitura — respostas são gerenciadas pelo Agente IA</span>
+              </div>
             </div>
           </div>
         )}
