@@ -27,7 +27,11 @@ api.interceptors.response.use(
     const msg = error.response?.data?.error || error.message;
     console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}: ${msg}`);
 
-    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
+    if (
+      error.response?.status === 401 && 
+      !error.config?.url?.includes('/auth/login') && 
+      error.response?.data?.error !== 'Senha atual incorreta'
+    ) {
       localStorage.removeItem('barber_crm_token');
       window.location.href = '/login';
     }
