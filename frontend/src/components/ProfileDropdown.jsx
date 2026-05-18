@@ -170,7 +170,7 @@ const ProfileDropdown = () => {
 
       {/* Modal Edição Perfil */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
           {/* Wrapper de centralização — garante distância segura do topo/fundo */}
           <div className="flex min-h-full items-center justify-center p-4 py-8">
           <div className="glass-panel w-full max-w-md bg-white dark:bg-dark-900 rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh]">
