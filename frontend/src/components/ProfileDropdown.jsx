@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Settings, Building, Mail, User, ShieldCheck, Camera, Loader2 } from 'lucide-react';
-import api, { uploadAvatar } from '../services/api';
+import { LogOut, Settings, Building, Mail, User, ShieldCheck, Camera, Loader2, Trash2 } from 'lucide-react';
+import api, { uploadAvatar, removeAvatar } from '../services/api';
 
 const ProfileDropdown = () => {
   const { user, logout, updateUser } = useAuth();
@@ -106,6 +106,22 @@ const ProfileDropdown = () => {
       setMessage(err.response?.data?.error || 'Erro ao salvar perfil');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      setUploadingAvatar(true);
+      setMessage('');
+      await removeAvatar();
+      updateUser({ avatar: null });
+      setAvatarPreview(null);
+      setAvatarFile(null);
+      setMessage('Foto removida com sucesso!');
+    } catch (err) {
+      setMessage(err.response?.data?.error || 'Erro ao remover foto');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -230,7 +246,7 @@ const ProfileDropdown = () => {
 
                   {/* Indicador de arquivo selecionado */}
                   {avatarFile && (
-                    <div className="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 rounded-lg">
+                    <div className="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 rounded-lg mt-2">
                       <Camera size={12} />
                       <span className="truncate max-w-[200px]">{avatarFile.name}</span>
                       <button
@@ -238,6 +254,19 @@ const ProfileDropdown = () => {
                         className="ml-1 text-dark-400 hover:text-red-500 transition-colors font-bold"
                       >×</button>
                     </div>
+                  )}
+
+                  {/* Botão de remover foto */}
+                  {!avatarFile && user?.avatar && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      disabled={uploadingAvatar}
+                      className="mt-2 text-[11px] text-red-500 hover:text-red-600 flex items-center gap-1 font-medium transition-colors bg-red-50 dark:bg-red-500/10 px-3 py-1.5 rounded-lg"
+                    >
+                      {uploadingAvatar ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      Remover foto
+                    </button>
                   )}
 
                   {/* Input de arquivo oculto */}

@@ -103,6 +103,7 @@ export const uploadAvatar   = (file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then((r) => r.data);
 };
+export const removeAvatar   = () => api.delete('/profile/avatar').then((r) => r.data);
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 export const fetchNotifications       = ()   => api.get('/notifications');
