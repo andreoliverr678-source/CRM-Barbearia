@@ -93,7 +93,10 @@ const ProfileDropdown = () => {
       updateUser({ name, barbershop_name: barbershopName });
 
       // 3. Troca senha (se preenchido)
-      if (currentPassword && newPassword) {
+      if (currentPassword || newPassword) {
+        if (!currentPassword || !newPassword) {
+          throw new Error('Para trocar a senha, preencha a senha atual e a nova.');
+        }
         await api.put('/profile/password', { currentPassword, newPassword });
         setCurrentPassword('');
         setNewPassword('');
@@ -103,7 +106,7 @@ const ProfileDropdown = () => {
       setTimeout(() => setIsModalOpen(false), 1500);
     } catch (err) {
       setUploadingAvatar(false);
-      setMessage(err.response?.data?.error || 'Erro ao salvar perfil');
+      setMessage(err.response?.data?.error || err.message || 'Erro ao salvar perfil');
     } finally {
       setSaving(false);
     }
