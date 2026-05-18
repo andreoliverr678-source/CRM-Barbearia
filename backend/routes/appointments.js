@@ -160,6 +160,24 @@ router.post('/', async (req, res) => {
       await emitClientStatusUpdate(io, data.telefone);
     }
 
+    // Chama o webhook do n8n para confirmação imediata (caso falte < 24h)
+    try {
+      await fetch('https://n8n.andreverissimo.shop/webhook/confirmacao-imediata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agendamento_id: data.id,
+          telefone: data.telefone,
+          nome: data.nome,
+          hora: data.hora,
+          data: data.data,
+          data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`
+        })
+      });
+    } catch (whError) {
+      console.error('[appointments] Erro ao chamar webhook n8n de confirmacao-imediata:', whError.message);
+    }
+
     res.status(201).json(mapToFrontend(data));
   } catch (err) {
     console.error('[appointments] Erro inesperado:', err.message);
