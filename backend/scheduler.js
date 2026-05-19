@@ -4,11 +4,12 @@
  *
  * Fluxos:
  *  1. Cancela agendamentos pendentes vencidos
- *  2. Lembrete 24h antes — dispara webhook `lembrete-24h` (janela: +23h a +25h)
- *  3. Lembrete 2h antes  — dispara webhook `lembrete-2h`  (janela: +1h55 a +2h05)
- *  4. Reativação         — dispara webhook `reativacao-cliente` (ultima_interacao > 30 dias)
+ *  2. Lembrete 24h antes — dispara webhook `crm-followup-confirmacao` (janela: +23h a +25h)
+ *  3. Lembrete 2h antes  — dispara webhook `crm-followup-chegando`    (janela: +110min a +130min)
+ *  4. Reativação         — dispara webhook `crm-followup-reativacao`  (ultimo_atendimento > 30 dias)
  *
- * Timezone: America/Sao_Paulo (UTC-3, sem horário de verão desde 2019)
+ * n8n Workflow ID : FYxTAXGpDql3v6P0
+ * Timezone        : America/Sao_Paulo (UTC-3)
  */
 
 const cron = require('node-cron');
@@ -106,7 +107,7 @@ async function verificarLembretes24h() {
     }
 
     for (const ag of agendamentos || []) {
-      await dispararWebhook('/webhook/lembrete-24h', {
+      await dispararWebhook('/webhook/crm-followup-confirmacao', {
         agendamento_id:        ag.id,
         telefone:              ag.telefone,
         nome:                  ag.nome,
@@ -128,18 +129,18 @@ async function verificarLembretes24h() {
   }
 }
 
-// ── Tarefa 3: Lembrete 1h antes do agendamento (menos de 1h) ──────────────────
+// ── Tarefa 3: Lembrete 2h antes do agendamento ───────────────────────────────
 
 /**
- * Busca agendamentos com horário entre +50min e +60min (faltando menos de 1h) a partir de agora.
- * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `lembrete-1h`
+ * Busca agendamentos com horário entre +110min e +130min (janela de 2h antes) a partir de agora.
+ * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `crm-followup-chegando`
  * e marca `lembrete_2h_enviado = true` no banco para não reenviar.
  */
-async function verificarLembretes1h() {
+async function verificarLembretes2h() {
   try {
     const agora  = agoraSP();
-    const inicio = toISO(new Date(agora.getTime() + 50 * 60 * 1000)); // +50min
-    const fim    = toISO(new Date(agora.getTime() + 60 * 60 * 1000)); // +60min
+    const inicio = toISO(new Date(agora.getTime() + 110 * 60 * 1000)); // +1h50min
+    const fim    = toISO(new Date(agora.getTime() + 130 * 60 * 1000)); // +2h10min
 
     const { data: agendamentos, error } = await supabase
       .from('agendamentos')
@@ -155,7 +156,7 @@ async function verificarLembretes1h() {
     }
 
     for (const ag of agendamentos || []) {
-      await dispararWebhook('/webhook/lembrete-1h', {
+      await dispararWebhook('/webhook/crm-followup-chegando', {
         agendamento_id:        ag.id,
         telefone:              ag.telefone,
         nome:                  ag.nome,
@@ -170,10 +171,10 @@ async function verificarLembretes1h() {
         .update({ lembrete_2h_enviado: true })
         .eq('id', ag.id);
 
-      console.log(`[scheduler] ⏰ Lembrete 1h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
+      console.log(`[scheduler] ⏰ Lembrete 2h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
     }
   } catch (err) {
-    console.error('[scheduler] ❌ Erro inesperado (lembrete 1h):', err.message);
+    console.error('[scheduler] ❌ Erro inesperado (lembrete 2h):', err.message);
   }
 }
 
@@ -202,7 +203,7 @@ async function verificarReativacao() {
     }
 
     for (const cliente of clientes || []) {
-      await dispararWebhook('/webhook/reativacao-cliente', {
+      await dispararWebhook('/webhook/crm-followup-reativacao', {
         cliente_id:         cliente.id,
         telefone:           cliente.telefone,
         nome:               cliente.nome,
@@ -233,24 +234,24 @@ function iniciarScheduler() {
   // Executa todas as verificações imediatamente ao iniciar o servidor
   cancelarAgendamentosVencidos();
   verificarLembretes24h();
-  verificarLembretes1h();
+  verificarLembretes2h();
   verificarReativacao();
 
   // Agenda todas as verificações a cada 1 minuto
   cron.schedule('* * * * *', async () => {
     await cancelarAgendamentosVencidos();
     await verificarLembretes24h();
-    await verificarLembretes1h();
+    await verificarLembretes2h();
     await verificarReativacao();
   }, {
     timezone: 'America/Sao_Paulo',
   });
 
-  console.log('[scheduler] 🚀 Scheduler iniciado (verificação a cada 1 minuto):');
+  console.log('[scheduler] 🚀 Scheduler iniciado (verificação a cada 1 minuto) — n8n: FYxTAXGpDql3v6P0');
   console.log('[scheduler]    ✓ Cancelamento de agendamentos pendentes vencidos');
-  console.log('[scheduler]    ✓ Lembrete 24h antes do agendamento  → /webhook/lembrete-24h');
-  console.log('[scheduler]    ✓ Lembrete 1h antes do agendamento   → /webhook/lembrete-1h');
-  console.log('[scheduler]    ✓ Reativação de clientes inativos     → /webhook/reativacao-cliente');
+  console.log('[scheduler]    ✓ Lembrete 24h antes do agendamento  → /webhook/crm-followup-confirmacao');
+  console.log('[scheduler]    ✓ Lembrete 2h antes do agendamento   → /webhook/crm-followup-chegando');
+  console.log('[scheduler]    ✓ Reativação de clientes inativos     → /webhook/crm-followup-reativacao');
 }
 
 module.exports = { iniciarScheduler, cancelarAgendamentosVencidos };
