@@ -128,18 +128,18 @@ async function verificarLembretes24h() {
   }
 }
 
-// ── Tarefa 3: Lembrete 2h antes do agendamento ────────────────────────────────
+// ── Tarefa 3: Lembrete 1h antes do agendamento (menos de 1h) ──────────────────
 
 /**
- * Busca agendamentos com horário entre +1h55min e +2h05min a partir de agora.
- * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `lembrete-2h`
+ * Busca agendamentos com horário entre +50min e +60min (faltando menos de 1h) a partir de agora.
+ * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `lembrete-1h`
  * e marca `lembrete_2h_enviado = true` no banco para não reenviar.
  */
-async function verificarLembretes2h() {
+async function verificarLembretes1h() {
   try {
     const agora  = agoraSP();
-    const inicio = toISO(new Date(agora.getTime() + (2 * 60 - 5) * 60 * 1000)); // +1h55min
-    const fim    = toISO(new Date(agora.getTime() + (2 * 60 + 5) * 60 * 1000)); // +2h05min
+    const inicio = toISO(new Date(agora.getTime() + 50 * 60 * 1000)); // +50min
+    const fim    = toISO(new Date(agora.getTime() + 60 * 60 * 1000)); // +60min
 
     const { data: agendamentos, error } = await supabase
       .from('agendamentos')
@@ -150,12 +150,12 @@ async function verificarLembretes2h() {
       .lte('data_hora_agendamento', fim);
 
     if (error) {
-      console.error('[scheduler] ❌ Erro ao buscar lembretes 2h:', error.message);
+      console.error('[scheduler] ❌ Erro ao buscar lembretes 1h:', error.message);
       return;
     }
 
     for (const ag of agendamentos || []) {
-      await dispararWebhook('/webhook/lembrete-2h', {
+      await dispararWebhook('/webhook/lembrete-1h', {
         agendamento_id:        ag.id,
         telefone:              ag.telefone,
         nome:                  ag.nome,
@@ -164,24 +164,24 @@ async function verificarLembretes2h() {
         data_hora_agendamento: ag.data_hora_agendamento,
       });
 
-      // Marca como enviado para evitar reenvio
+      // Marca como enviado no banco para evitar reenvio
       await supabase
         .from('agendamentos')
         .update({ lembrete_2h_enviado: true })
         .eq('id', ag.id);
 
-      console.log(`[scheduler] ⏰ Lembrete 2h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
+      console.log(`[scheduler] ⏰ Lembrete 1h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
     }
   } catch (err) {
-    console.error('[scheduler] ❌ Erro inesperado (lembrete 2h):', err.message);
+    console.error('[scheduler] ❌ Erro inesperado (lembrete 1h):', err.message);
   }
 }
 
-// ── Tarefa 4: Reativação de clientes inativos (> 30 dias) ─────────────────────
+// ── Tarefa 4: Reativação de clientes inativos (> 30 dias sem corte concluído) ──
 
 /**
- * Busca clientes cuja `ultima_interacao` é anterior a 30 dias atrás
- * e que ainda não tiveram a mensagem de reativação enviada.
+ * Busca clientes cujo último atendimento (corte concluído) ocorreu há mais de 30 dias
+ * e que ainda não receberam a reativação.
  * Dispara o webhook `reativacao-cliente` e marca `reativacao_enviada = true`.
  */
 async function verificarReativacao() {
@@ -191,10 +191,10 @@ async function verificarReativacao() {
 
     const { data: clientes, error } = await supabase
       .from('clientes')
-      .select('id, nome, telefone, ultima_interacao')
+      .select('id, nome, telefone, ultimo_atendimento, ultima_interacao')
       .eq('reativacao_enviada', false)
-      .not('ultima_interacao', 'is', null)
-      .lte('ultima_interacao', limite);
+      .not('ultimo_atendimento', 'is', null)
+      .lte('ultimo_atendimento', limite);
 
     if (error) {
       console.error('[scheduler] ❌ Erro ao buscar clientes para reativação:', error.message);
@@ -206,7 +206,7 @@ async function verificarReativacao() {
         cliente_id:         cliente.id,
         telefone:           cliente.telefone,
         nome:               cliente.nome,
-        ultima_interacao:   cliente.ultima_interacao,
+        ultimo_atendimento: cliente.ultimo_atendimento || cliente.ultima_interacao,
       });
 
       // Marca como enviado para evitar reenvio
@@ -215,7 +215,7 @@ async function verificarReativacao() {
         .update({ reativacao_enviada: true })
         .eq('id', cliente.id);
 
-      console.log(`[scheduler] 🔄 Reativação → ${cliente.nome} (${cliente.telefone}) — inativo desde ${cliente.ultima_interacao}`);
+      console.log(`[scheduler] 🔄 Reativação → ${cliente.nome} (${cliente.telefone}) — inativo desde corte em ${cliente.ultimo_atendimento}`);
     }
   } catch (err) {
     console.error('[scheduler] ❌ Erro inesperado (reativação):', err.message);
@@ -233,14 +233,14 @@ function iniciarScheduler() {
   // Executa todas as verificações imediatamente ao iniciar o servidor
   cancelarAgendamentosVencidos();
   verificarLembretes24h();
-  verificarLembretes2h();
+  verificarLembretes1h();
   verificarReativacao();
 
   // Agenda todas as verificações a cada 1 minuto
   cron.schedule('* * * * *', async () => {
     await cancelarAgendamentosVencidos();
     await verificarLembretes24h();
-    await verificarLembretes2h();
+    await verificarLembretes1h();
     await verificarReativacao();
   }, {
     timezone: 'America/Sao_Paulo',
@@ -249,7 +249,7 @@ function iniciarScheduler() {
   console.log('[scheduler] 🚀 Scheduler iniciado (verificação a cada 1 minuto):');
   console.log('[scheduler]    ✓ Cancelamento de agendamentos pendentes vencidos');
   console.log('[scheduler]    ✓ Lembrete 24h antes do agendamento  → /webhook/lembrete-24h');
-  console.log('[scheduler]    ✓ Lembrete 2h antes do agendamento   → /webhook/lembrete-2h');
+  console.log('[scheduler]    ✓ Lembrete 1h antes do agendamento   → /webhook/lembrete-1h');
   console.log('[scheduler]    ✓ Reativação de clientes inativos     → /webhook/reativacao-cliente');
 }
 
