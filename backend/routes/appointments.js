@@ -171,6 +171,7 @@ router.post('/', async (req, res) => {
           nome:                  data.nome,
           hora:                  data.hora,
           data:                  data.data,
+          servico:               data.servico,
           data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`,
         })
       });
@@ -198,6 +199,7 @@ router.post('/', async (req, res) => {
             nome:                  data.nome,
             hora:                  data.hora,
             data:                  data.data,
+            servico:               data.servico,
             data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`,
           })
         });
