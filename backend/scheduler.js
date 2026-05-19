@@ -1,22 +1,63 @@
 /**
  * scheduler.js
- * Cancela automaticamente agendamentos com status "pendente"
- * cuja data/hora já passou em relação ao horário atual do sistema (America/Sao_Paulo).
+ * Gerencia todas as automações de follow-up da Barbearia via cron (a cada 1 minuto).
  *
- * Regras:
- *  - Compara usando data e hora completas
- *  - Considera o timezone America/Sao_Paulo
- *  - Altera apenas agendamentos com status "pendente"
- *  - Não altera: confirmado, cancelado, concluído
- *  - Executa automaticamente a cada 1 minuto via node-cron
+ * Fluxos:
+ *  1. Cancela agendamentos pendentes vencidos
+ *  2. Lembrete 24h antes — dispara webhook `lembrete-24h` (janela: +23h a +25h)
+ *  3. Lembrete 2h antes  — dispara webhook `lembrete-2h`  (janela: +1h55 a +2h05)
+ *  4. Reativação         — dispara webhook `reativacao-cliente` (ultima_interacao > 30 dias)
+ *
+ * Timezone: America/Sao_Paulo (UTC-3, sem horário de verão desde 2019)
  */
 
 const cron = require('node-cron');
 const supabase = require('./db');
 
+const N8N_BASE = 'https://n8n.andreverissimo.shop';
+
+// ── Helpers de tempo (America/Sao_Paulo = UTC-3) ──────────────────────────────
+
+/** Retorna a data/hora atual ajustada para America/Sao_Paulo (UTC-3). */
+function agoraSP() {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000);
+}
+
+/**
+ * Converte um Date para string ISO sem timezone (YYYY-MM-DDTHH:MM:SS),
+ * compatível com o formato salvo em `data_hora_agendamento` no banco.
+ */
+function toISO(date) {
+  return date.toISOString().substring(0, 19);
+}
+
+// ── Helper: disparar webhook no n8n ──────────────────────────────────────────
+
+/**
+ * Realiza POST para um webhook do n8n de forma segura.
+ * @param {string} path  - Caminho do webhook, ex: '/webhook/lembrete-24h'
+ * @param {object} payload - Dados a enviar no corpo JSON
+ */
+async function dispararWebhook(path, payload) {
+  try {
+    const res = await fetch(`${N8N_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error(`[scheduler] ⚠️ Webhook ${path} retornou status ${res.status}`);
+    }
+  } catch (err) {
+    console.error(`[scheduler] ❌ Erro ao chamar webhook ${path}:`, err.message);
+  }
+}
+
+// ── Tarefa 1: Cancelar agendamentos pendentes vencidos ────────────────────────
+
 /**
  * Chama a função SQL `cancelar_agendamentos_vencidos()` no Supabase.
- * Retorna o número de agendamentos cancelados.
+ * Cancela automaticamente agendamentos com status "pendente" cuja data/hora já passou.
  */
 async function cancelarAgendamentosVencidos() {
   try {
@@ -33,25 +74,183 @@ async function cancelarAgendamentosVencidos() {
 
     return qtd ?? 0;
   } catch (err) {
-    console.error('[scheduler] ❌ Erro inesperado:', err.message);
+    console.error('[scheduler] ❌ Erro inesperado (cancelar):', err.message);
     return 0;
   }
 }
 
+// ── Tarefa 2: Lembrete 24h antes do agendamento ───────────────────────────────
+
 /**
- * Inicia o cron job — executa a cada minuto.
+ * Busca agendamentos com horário entre +23h e +25h a partir de agora.
+ * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `lembrete-24h`
+ * e marca `lembrete_24h_enviado = true` no banco para não reenviar.
+ */
+async function verificarLembretes24h() {
+  try {
+    const agora  = agoraSP();
+    const inicio = toISO(new Date(agora.getTime() + 23 * 60 * 60 * 1000)); // agora + 23h
+    const fim    = toISO(new Date(agora.getTime() + 25 * 60 * 60 * 1000)); // agora + 25h
+
+    const { data: agendamentos, error } = await supabase
+      .from('agendamentos')
+      .select('id, nome, telefone, hora, data, data_hora_agendamento')
+      .in('status', ['confirmado', 'pendente'])
+      .eq('lembrete_24h_enviado', false)
+      .gte('data_hora_agendamento', inicio)
+      .lte('data_hora_agendamento', fim);
+
+    if (error) {
+      console.error('[scheduler] ❌ Erro ao buscar lembretes 24h:', error.message);
+      return;
+    }
+
+    for (const ag of agendamentos || []) {
+      await dispararWebhook('/webhook/lembrete-24h', {
+        agendamento_id:        ag.id,
+        telefone:              ag.telefone,
+        nome:                  ag.nome,
+        hora:                  ag.hora,
+        data:                  ag.data,
+        data_hora_agendamento: ag.data_hora_agendamento,
+      });
+
+      // Marca como enviado para evitar reenvio
+      await supabase
+        .from('agendamentos')
+        .update({ lembrete_24h_enviado: true })
+        .eq('id', ag.id);
+
+      console.log(`[scheduler] 📅 Lembrete 24h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
+    }
+  } catch (err) {
+    console.error('[scheduler] ❌ Erro inesperado (lembrete 24h):', err.message);
+  }
+}
+
+// ── Tarefa 3: Lembrete 2h antes do agendamento ────────────────────────────────
+
+/**
+ * Busca agendamentos com horário entre +1h55min e +2h05min a partir de agora.
+ * Para cada um (que ainda não recebeu o lembrete), dispara o webhook `lembrete-2h`
+ * e marca `lembrete_2h_enviado = true` no banco para não reenviar.
+ */
+async function verificarLembretes2h() {
+  try {
+    const agora  = agoraSP();
+    const inicio = toISO(new Date(agora.getTime() + (2 * 60 - 5) * 60 * 1000)); // +1h55min
+    const fim    = toISO(new Date(agora.getTime() + (2 * 60 + 5) * 60 * 1000)); // +2h05min
+
+    const { data: agendamentos, error } = await supabase
+      .from('agendamentos')
+      .select('id, nome, telefone, hora, data, data_hora_agendamento')
+      .in('status', ['confirmado', 'pendente'])
+      .eq('lembrete_2h_enviado', false)
+      .gte('data_hora_agendamento', inicio)
+      .lte('data_hora_agendamento', fim);
+
+    if (error) {
+      console.error('[scheduler] ❌ Erro ao buscar lembretes 2h:', error.message);
+      return;
+    }
+
+    for (const ag of agendamentos || []) {
+      await dispararWebhook('/webhook/lembrete-2h', {
+        agendamento_id:        ag.id,
+        telefone:              ag.telefone,
+        nome:                  ag.nome,
+        hora:                  ag.hora,
+        data:                  ag.data,
+        data_hora_agendamento: ag.data_hora_agendamento,
+      });
+
+      // Marca como enviado para evitar reenvio
+      await supabase
+        .from('agendamentos')
+        .update({ lembrete_2h_enviado: true })
+        .eq('id', ag.id);
+
+      console.log(`[scheduler] ⏰ Lembrete 2h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
+    }
+  } catch (err) {
+    console.error('[scheduler] ❌ Erro inesperado (lembrete 2h):', err.message);
+  }
+}
+
+// ── Tarefa 4: Reativação de clientes inativos (> 30 dias) ─────────────────────
+
+/**
+ * Busca clientes cuja `ultima_interacao` é anterior a 30 dias atrás
+ * e que ainda não tiveram a mensagem de reativação enviada.
+ * Dispara o webhook `reativacao-cliente` e marca `reativacao_enviada = true`.
+ */
+async function verificarReativacao() {
+  try {
+    const agora  = agoraSP();
+    const limite = toISO(new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000)); // agora - 30 dias
+
+    const { data: clientes, error } = await supabase
+      .from('clientes')
+      .select('id, nome, telefone, ultima_interacao')
+      .eq('reativacao_enviada', false)
+      .not('ultima_interacao', 'is', null)
+      .lte('ultima_interacao', limite);
+
+    if (error) {
+      console.error('[scheduler] ❌ Erro ao buscar clientes para reativação:', error.message);
+      return;
+    }
+
+    for (const cliente of clientes || []) {
+      await dispararWebhook('/webhook/reativacao-cliente', {
+        cliente_id:         cliente.id,
+        telefone:           cliente.telefone,
+        nome:               cliente.nome,
+        ultima_interacao:   cliente.ultima_interacao,
+      });
+
+      // Marca como enviado para evitar reenvio
+      await supabase
+        .from('clientes')
+        .update({ reativacao_enviada: true })
+        .eq('id', cliente.id);
+
+      console.log(`[scheduler] 🔄 Reativação → ${cliente.nome} (${cliente.telefone}) — inativo desde ${cliente.ultima_interacao}`);
+    }
+  } catch (err) {
+    console.error('[scheduler] ❌ Erro inesperado (reativação):', err.message);
+  }
+}
+
+// ── Inicialização do Scheduler ────────────────────────────────────────────────
+
+/**
+ * Inicia todos os cron jobs — executa a cada minuto.
+ * Também executa todas as verificações imediatamente ao iniciar o servidor.
  * Timezone configurado para America/Sao_Paulo.
  */
 function iniciarScheduler() {
-  // Executa imediatamente ao iniciar o servidor
+  // Executa todas as verificações imediatamente ao iniciar o servidor
   cancelarAgendamentosVencidos();
+  verificarLembretes24h();
+  verificarLembretes2h();
+  verificarReativacao();
 
-  // Agenda execução a cada 1 minuto
-  cron.schedule('* * * * *', cancelarAgendamentosVencidos, {
+  // Agenda todas as verificações a cada 1 minuto
+  cron.schedule('* * * * *', async () => {
+    await cancelarAgendamentosVencidos();
+    await verificarLembretes24h();
+    await verificarLembretes2h();
+    await verificarReativacao();
+  }, {
     timezone: 'America/Sao_Paulo',
   });
 
-  console.log('[scheduler] 🕐 Scheduler iniciado — verificação de agendamentos vencidos a cada 1 minuto.');
+  console.log('[scheduler] 🚀 Scheduler iniciado (verificação a cada 1 minuto):');
+  console.log('[scheduler]    ✓ Cancelamento de agendamentos pendentes vencidos');
+  console.log('[scheduler]    ✓ Lembrete 24h antes do agendamento  → /webhook/lembrete-24h');
+  console.log('[scheduler]    ✓ Lembrete 2h antes do agendamento   → /webhook/lembrete-2h');
+  console.log('[scheduler]    ✓ Reativação de clientes inativos     → /webhook/reativacao-cliente');
 }
 
 module.exports = { iniciarScheduler, cancelarAgendamentosVencidos };

@@ -160,22 +160,58 @@ router.post('/', async (req, res) => {
       await emitClientStatusUpdate(io, data.telefone);
     }
 
-    // Chama o webhook do n8n para confirmação imediata (caso falte < 24h)
+    // ── Webhook 1: Confirmação imediata (sempre disparado ao criar agendamento) ──
     try {
       await fetch('https://n8n.andreverissimo.shop/webhook/confirmacao-imediata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agendamento_id: data.id,
-          telefone: data.telefone,
-          nome: data.nome,
-          hora: data.hora,
-          data: data.data,
-          data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`
+          agendamento_id:        data.id,
+          telefone:              data.telefone,
+          nome:                  data.nome,
+          hora:                  data.hora,
+          data:                  data.data,
+          data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`,
         })
       });
     } catch (whError) {
-      console.error('[appointments] Erro ao chamar webhook n8n de confirmacao-imediata:', whError.message);
+      console.error('[appointments] Erro ao chamar webhook confirmacao-imediata:', whError.message);
+    }
+
+    // ── Webhook 2: Lembrete mesmo dia (agendamento dentro das próximas 24h) ────
+    // Se o cliente agendou para hoje ou para qualquer horário dentro das próximas
+    // 24h, o lembrete já é disparado imediatamente. O flag lembrete_24h_enviado
+    // é marcado como true para que o scheduler não envie um segundo lembrete.
+    try {
+      const dataHoraStr = data.data_hora_agendamento || `${data.data}T${data.hora}:00`;
+      const agoraSP     = new Date(Date.now() - 3 * 60 * 60 * 1000); // UTC-3
+      const dataHoraAppt = new Date(dataHoraStr);
+      const diffHoras   = (dataHoraAppt - agoraSP) / (1000 * 60 * 60);
+
+      if (diffHoras > 0 && diffHoras <= 24) {
+        await fetch('https://n8n.andreverissimo.shop/webhook/lembrete-mesmo-dia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agendamento_id:        data.id,
+            telefone:              data.telefone,
+            nome:                  data.nome,
+            hora:                  data.hora,
+            data:                  data.data,
+            data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00-03:00`,
+          })
+        });
+
+        // Marca lembrete_24h como enviado para o scheduler não duplicar
+        await supabase
+          .from('agendamentos')
+          .update({ lembrete_24h_enviado: true })
+          .eq('id', data.id);
+
+        console.log(`[appointments] 📅 Lembrete mesmo dia → ${data.nome} (${data.telefone}) — ${data.data} às ${data.hora} (${diffHoras.toFixed(1)}h restantes)`);
+      }
+    } catch (whError) {
+      console.error('[appointments] Erro ao chamar webhook lembrete-mesmo-dia:', whError.message);
     }
 
     res.status(201).json(mapToFrontend(data));
