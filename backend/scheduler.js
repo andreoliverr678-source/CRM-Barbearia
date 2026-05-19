@@ -129,6 +129,67 @@ async function verificarLembretes24h() {
   }
 }
 
+// ── Tarefa 2b: Lembrete imediato para agendamentos dentro de 24h ───────────────
+
+/**
+ * Cobre o caso de agendamentos feitos PELO WHATSAPP (ou qualquer canal que insere
+ * direto no Supabase sem passar pelo appointments.js).
+ *
+ * Busca todos os agendamentos futuros com menos de 23h de antecedência que ainda
+ * NÃO receberam o lembrete 24h e dispara o webhook imediatamente.
+ * Também suprime o lembrete 2h se o agendamento estiver a menos de 2h.
+ *
+ * Janela: agora < data_hora_agendamento < agora+23h
+ * (Os que estão entre +23h e +25h são cobertos por verificarLembretes24h)
+ */
+async function verificarAgendamentosDentroDe24h() {
+  try {
+    const agora  = agoraSP();
+    const agora_iso  = toISO(agora);
+    const limite_iso = toISO(new Date(agora.getTime() + 23 * 60 * 60 * 1000)); // agora + 23h
+
+    const { data: agendamentos, error } = await supabase
+      .from('agendamentos')
+      .select('id, nome, telefone, hora, data, data_hora_agendamento, servico')
+      .in('status', ['confirmado', 'pendente'])
+      .eq('lembrete_24h_enviado', false)
+      .gt('data_hora_agendamento', agora_iso)   // futuro
+      .lt('data_hora_agendamento', limite_iso); // dentro de 23h
+
+    if (error) {
+      console.error('[scheduler] ❌ Erro ao buscar agendamentos dentro de 24h:', error.message);
+      return;
+    }
+
+    for (const ag of agendamentos || []) {
+      await dispararWebhook('/webhook/crm-followup-confirmacao', {
+        agendamento_id:        ag.id,
+        telefone:              ag.telefone,
+        nome:                  ag.nome,
+        hora:                  ag.hora,
+        data:                  ag.data,
+        servico:               ag.servico,
+        data_hora_agendamento: ag.data_hora_agendamento,
+      });
+
+      // Calcula diferença para saber se precisa suprimir o lembrete 2h também
+      const diffMin = (new Date(ag.data_hora_agendamento) - agora) / (1000 * 60);
+      const flags   = { lembrete_24h_enviado: true };
+      if (diffMin <= 120) flags.lembrete_2h_enviado = true; // ≤ 2h: suprime lembrete 2h
+
+      await supabase
+        .from('agendamentos')
+        .update(flags)
+        .eq('id', ag.id);
+
+      const suprimido = flags.lembrete_2h_enviado ? ' (lembrete 2h suprimido — agendamento próximo)' : '';
+      console.log(`[scheduler] 📲 Lembrete 24h imediato (via scheduler) → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}${suprimido}`);
+    }
+  } catch (err) {
+    console.error('[scheduler] ❌ Erro inesperado (agendamentos dentro de 24h):', err.message);
+  }
+}
+
 // ── Tarefa 3: Lembrete 2h antes do agendamento ───────────────────────────────
 
 /**
@@ -234,6 +295,7 @@ function iniciarScheduler() {
   // Executa todas as verificações imediatamente ao iniciar o servidor
   cancelarAgendamentosVencidos();
   verificarLembretes24h();
+  verificarAgendamentosDentroDe24h();
   verificarLembretes2h();
   verificarReativacao();
 
@@ -241,6 +303,7 @@ function iniciarScheduler() {
   cron.schedule('* * * * *', async () => {
     await cancelarAgendamentosVencidos();
     await verificarLembretes24h();
+    await verificarAgendamentosDentroDe24h();
     await verificarLembretes2h();
     await verificarReativacao();
   }, {
@@ -249,9 +312,10 @@ function iniciarScheduler() {
 
   console.log('[scheduler] 🚀 Scheduler iniciado (verificação a cada 1 minuto) — n8n: FYxTAXGpDql3v6P0');
   console.log('[scheduler]    ✓ Cancelamento de agendamentos pendentes vencidos');
-  console.log('[scheduler]    ✓ Lembrete 24h antes do agendamento  → /webhook/crm-followup-confirmacao');
-  console.log('[scheduler]    ✓ Lembrete 2h antes do agendamento   → /webhook/crm-followup-chegando');
-  console.log('[scheduler]    ✓ Reativação de clientes inativos     → /webhook/crm-followup-reativacao');
+  console.log('[scheduler]    ✓ Lembrete 24h (janela +23h a +25h)          → /webhook/crm-followup-confirmacao');
+  console.log('[scheduler]    ✓ Lembrete 24h imediato (agendamentos <23h)  → /webhook/crm-followup-confirmacao');
+  console.log('[scheduler]    ✓ Lembrete 2h antes do agendamento           → /webhook/crm-followup-chegando');
+  console.log('[scheduler]    ✓ Reativação de clientes inativos            → /webhook/crm-followup-reativacao');
 }
 
 module.exports = { iniciarScheduler, cancelarAgendamentosVencidos };
