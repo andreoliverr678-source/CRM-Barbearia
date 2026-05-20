@@ -160,57 +160,7 @@ router.post('/', async (req, res) => {
       await emitClientStatusUpdate(io, data.telefone);
     }
 
-    // ── Lembrete 24h: disparo imediato se o agendamento é dentro das próximas 24h ──
-    // Regras:
-    //  • diff <= 24h  → dispara lembrete 24h (confirmação) AGORA
-    //  • diff <= 2h   → também marca lembrete_2h_enviado = true (cliente já foi avisado,
-    //                   não precisa receber o lembrete 2h do scheduler depois)
-    //  • diff >  24h  → scheduler cuida dos dois lembretes no momento certo
-    try {
-      const dataHoraStr  = data.data_hora_agendamento || `${data.data}T${data.hora}:00`;
-      const agoraSP      = new Date(Date.now() - 3 * 60 * 60 * 1000); // UTC-3
-      const dataHoraAppt = new Date(dataHoraStr);
-      const diffHoras    = (dataHoraAppt - agoraSP) / (1000 * 60 * 60);
-
-      if (diffHoras > 0 && diffHoras <= 24) {
-        // Dispara o MESMO webhook do scheduler — cliente recebe a mensagem de confirmação
-        await fetch('https://n8n.andreverissimo.shop/webhook/crm-followup-confirmacao', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agendamento_id:        data.id,
-            telefone:              data.telefone,
-            nome:                  data.nome,
-            hora:                  data.hora,
-            data:                  data.data,
-            servico:               data.servico,
-            data_hora_agendamento: data.data_hora_agendamento || `${data.data}T${data.hora}:00`,
-          })
-        });
-
-        // Monta quais flags marcar como enviado
-        const flags = { lembrete_24h_enviado: true };
-
-        // Se agendar com ≤ 2h de antecedência, o scheduler de 2h nunca vai pegar
-        // esse agendamento — e o cliente já foi avisado pelo lembrete 24h
-        if (diffHoras <= 2) {
-          flags.lembrete_2h_enviado = true;
-          console.log(`[appointments] ⚡ Agendamento em ${diffHoras.toFixed(1)}h — lembrete 24h enviado, lembrete 2h suprimido (cliente já foi avisado).`);
-        } else {
-          console.log(`[appointments] 📅 Lembrete 24h imediato → ${data.nome} (${data.telefone}) — faltam ${diffHoras.toFixed(1)}h. Scheduler enviará lembrete 2h quando chegar a hora.`);
-        }
-
-        await supabase
-          .from('agendamentos')
-          .update(flags)
-          .eq('id', data.id);
-
-      } else if (diffHoras > 24) {
-        console.log(`[appointments] 🕐 Agendamento com ${diffHoras.toFixed(1)}h de antecedência — scheduler cuidará do lembrete 24h e do lembrete 2h.`);
-      }
-    } catch (whError) {
-      console.error('[appointments] Erro ao chamar webhook crm-followup-confirmacao:', whError.message);
-    }
+    // ── Lembrete 24h: será disparado apenas pelo scheduler para agendamentos com +24h antecedência ──
 
     res.status(201).json(mapToFrontend(data));
   } catch (err) {
