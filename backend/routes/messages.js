@@ -132,6 +132,24 @@ router.post('/webhook', async (req, res) => {
       return res.status(400).json({ error: 'Os campos "mensagem" e "telefone" são obrigatórios' });
     }
 
+    // 1. Verifica se o cliente já existe, se não, cria como 'lead'
+    const { data: clienteExistente } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('telefone', telefone)
+      .single();
+
+    if (!clienteExistente) {
+      await supabase
+        .from('clientes')
+        .insert([{
+          telefone,
+          status: 'lead',
+          nome: 'Novo Contato'
+        }]);
+    }
+
+    // 2. Salva a mensagem
     const { data: created, error } = await supabase
       .from('conversas')
       .insert([{
