@@ -78,6 +78,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'O campo "phone" é obrigatório' });
     }
 
+    // Garante que o status padrão seja sempre 'lead' caso não seja fornecido
+    if (!backendData.status) {
+      backendData.status = 'lead';
+    }
+
     const { data, error } = await supabase
       .from('clientes')
       .insert([backendData])
