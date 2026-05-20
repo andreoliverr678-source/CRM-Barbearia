@@ -7,7 +7,8 @@ const { startOfWeek, endOfWeek, parseISO, isValid, getDay } = require('date-fns'
 router.get('/', async (req, res) => {
   try {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    // Pega a data atual já ajustada para o fuso do Brasil (ex: 2024-05-19)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
     // ── Períodos ──────────────────────────────────────────────────────────────
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
