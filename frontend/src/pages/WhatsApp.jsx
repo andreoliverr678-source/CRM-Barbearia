@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, CheckCheck, AlertCircle, RefreshCw, MessageCircleOff, ArrowLeft, Eye } from 'lucide-react';
+import { Search, CheckCheck, AlertCircle, RefreshCw, MessageCircleOff, ArrowLeft, Eye, ExternalLink } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { io } from 'socket.io-client';
@@ -324,11 +324,22 @@ const WhatsApp = () => {
             </div>
 
             {/* Rodapé somente leitura */}
-            <div className="p-3 md:p-4 bg-white/70 dark:bg-dark-900/70 backdrop-blur-xl border-t border-dark-200 dark:border-dark-800 shrink-0 safe-area-bottom relative z-10">
-              <div className="flex items-center justify-center gap-2 text-dark-400 dark:text-dark-500 text-xs py-1 select-none">
-                <Eye size={13} />
+            <div className="p-3 md:p-4 bg-white/70 dark:bg-dark-900/70 backdrop-blur-xl border-t border-dark-200 dark:border-dark-800 shrink-0 safe-area-bottom relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-dark-400 dark:text-dark-500 text-xs py-1 select-none text-center sm:text-left">
+                <Eye size={13} className="shrink-0" />
                 <span>Visualização somente leitura — respostas são gerenciadas pelo Agente IA</span>
               </div>
+              {activeConversation && (
+                <a 
+                  href={`https://wa.me/${activeConversation.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-full sm:w-auto gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm hover:shadow-emerald-500/20 active:scale-95"
+                >
+                  <ExternalLink size={16} />
+                  Abrir no WhatsApp
+                </a>
+              )}
             </div>
           </div>
         )}
