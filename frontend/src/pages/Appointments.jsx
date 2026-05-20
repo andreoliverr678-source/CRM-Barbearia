@@ -312,7 +312,8 @@ const Appointments = () => {
     // Front-end Validations
     const [hours, minutes] = formData.time.split(':').map(Number);
     if (hours < 8 || hours > 20) {
-      return showToast('O horário deve estar entre 08:00 e 20:00.', 'error');
+      toast.error('O horário deve estar entre 08:00 e 20:00.');
+      return;
     }
 
     if (!editingApt || (editingApt.date !== formData.date || editingApt.time.substring(0, 5) !== formData.time)) {
@@ -324,7 +325,8 @@ const Appointments = () => {
         a.id !== editingApt?.id
       );
       if (hasConflict) {
-        return showToast('Conflito: Já existe um agendamento para este horário.', 'error');
+        toast.error('Conflito: Já existe um agendamento para este horário.');
+        return;
       }
     }
 
