@@ -472,7 +472,7 @@ const Clients = () => {
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+            <form id="clientForm" onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-1.5">Nome</label>
                 <input 
@@ -528,6 +528,7 @@ const Clients = () => {
               </button>
               <button 
                 type="submit" 
+                form="clientForm"
                 disabled={isSubmitting}
                 className="px-5 py-2.5 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-lg shadow-primary-500/30 disabled:opacity-50 flex items-center gap-2"
               >
