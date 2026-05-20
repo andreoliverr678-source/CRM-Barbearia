@@ -167,10 +167,11 @@ async function verificarLembretes2h() {
         data_hora_agendamento: ag.data_hora_agendamento,
       });
 
-      // Marca como enviado no banco para evitar reenvio
+      // Marca como enviado e também já altera o status para confirmado
+      // pois não há fluxo de resposta neste momento (já está na hora)
       await supabase
         .from('agendamentos')
-        .update({ lembrete_2h_enviado: true })
+        .update({ lembrete_2h_enviado: true, status: 'confirmado' })
         .eq('id', ag.id);
 
       console.log(`[scheduler] ⏰ Lembrete 2h → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
@@ -217,10 +218,11 @@ async function verificarAgendamentosDentroDe2h() {
         data_hora_agendamento: ag.data_hora_agendamento,
       });
 
-      // Marca como enviado
+      // Marca como enviado e também já altera o status para confirmado
+      // pois se ele agendou agora em cima da hora, já está confirmado
       await supabase
         .from('agendamentos')
-        .update({ lembrete_2h_enviado: true })
+        .update({ lembrete_2h_enviado: true, status: 'confirmado' })
         .eq('id', ag.id);
 
       console.log(`[scheduler] ⚡ Lembrete 2h IMEDIATO → ${ag.nome} (${ag.telefone}) — ${ag.data} às ${ag.hora}`);
