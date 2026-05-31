@@ -11,7 +11,11 @@ const api = axios.create({
 // ── Interceptor REQUEST: injeta Bearer token ──────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('barber_crm_token');
+    const isBarberPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/barber');
+    const token = isBarberPath
+      ? localStorage.getItem('barber_app_token')
+      : localStorage.getItem('barber_crm_token');
+      
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,10 +34,17 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 && 
       !error.config?.url?.includes('/auth/login') && 
+      !error.config?.url?.includes('/auth/barber/login') && 
       error.response?.data?.error !== 'Senha atual incorreta'
     ) {
-      localStorage.removeItem('barber_crm_token');
-      window.location.href = '/login';
+      const isBarberPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/barber');
+      if (isBarberPath) {
+        localStorage.removeItem('barber_app_token');
+        window.location.href = '/barber/login';
+      } else {
+        localStorage.removeItem('barber_crm_token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -75,14 +86,14 @@ export const deleteService     = (id) => api.delete(`/services/${id}`).then((r) 
 
 // ── Clientes ──────────────────────────────────────────────────────────────────
 export const fetchMetrics      = () => api.get('/metrics').then((r) => r.data);
-export const fetchClients      = () => api.get('/clients').then((r) => r.data);
+export const fetchClients      = (params = {}) => api.get('/clients', { params }).then((r) => r.data);
 export const fetchClient       = (id) => api.get(`/clients/${id}`).then((r) => r.data);
 export const createClient      = (data) => api.post('/clients', data).then((r) => r.data);
 export const updateClient      = (id, data) => api.put(`/clients/${id}`, data).then((r) => r.data);
 export const deleteClient      = (id) => api.delete(`/clients/${id}`).then((r) => r.data);
 
 // ── Agendamentos ──────────────────────────────────────────────────────────────
-export const fetchAppointments = () => api.get('/appointments').then((r) => r.data);
+export const fetchAppointments = (params = {}) => api.get('/appointments', { params }).then((r) => r.data);
 export const createAppointment = (data) => api.post('/appointments', data).then((r) => r.data);
 export const updateAppointment = (id, data) => api.put(`/appointments/${id}`, data).then((r) => r.data);
 export const deleteAppointment = (id) => api.delete(`/appointments/${id}`).then((r) => r.data);
@@ -113,5 +124,19 @@ export const removeAvatar   = () => api.delete('/profile/avatar').then((r) => r.
 export const fetchNotifications       = ()   => api.get('/notifications');
 export const markNotificationRead     = (id) => api.put(`/notifications/${id}/read`);
 export const markAllNotificationsRead = ()   => api.put('/notifications/read-all');
+
+// ── Barbers ───────────────────────────────────────────────────────────────────
+export const fetchBarbers             = () => api.get('/barbers').then((r) => r.data);
+export const fetchBarber              = (id) => api.get(`/barbers/${id}`).then((r) => r.data);
+export const createBarber             = (data) => api.post('/barbers', data).then((r) => r.data);
+export const updateBarber             = (id, data) => api.put(`/barbers/${id}`, data).then((r) => r.data);
+export const deleteBarber             = (id) => api.delete(`/barbers/${id}`).then((r) => r.data);
+
+// ── Barber Auth ───────────────────────────────────────────────────────────────
+export const loginBarberApi           = (email, password) => api.post('/auth/barber/login', { email, password });
+export const fetchBarberMe            = () => api.get('/auth/barber/me');
+
+// ── Barber Dashboard ──────────────────────────────────────────────────────────
+export const fetchBarberDashboard     = () => api.get('/barber/dashboard').then((r) => r.data);
 
 export default api;

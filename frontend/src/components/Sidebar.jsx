@@ -16,6 +16,7 @@ const navItems = [
   { name: 'Dashboard',     icon: <LayoutDashboard size={20} />, path: '/' },
   { name: 'Clientes',      icon: <Users size={20} />,           path: '/clients' },
   { name: 'Agendamentos',  icon: <Calendar size={20} />,        path: '/appointments' },
+  { name: 'Equipe',        icon: <Scissors size={20} />,        path: '/barbers' },
   { name: 'WhatsApp',      icon: <MessageCircle size={20} />,   path: '/whatsapp' },
   { name: 'Configurações', icon: <Settings size={20} />,        path: '/settings' },
 ];

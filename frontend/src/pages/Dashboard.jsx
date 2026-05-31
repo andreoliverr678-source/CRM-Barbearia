@@ -232,6 +232,30 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Faturamento por Barbeiro */}
+          <div className="glass-panel p-4 md:p-6 rounded-2xl flex-1 flex flex-col">
+            <h3 className="text-sm md:text-base font-bold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
+              <TrendingUp size={16} className="text-emerald-500" />
+              Faturamento por Barbeiro (Mês)
+            </h3>
+            <div className="flex-1 space-y-3">
+              {loading && !dashboard ? (
+                Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-dark-50 dark:bg-dark-800/50 rounded-xl animate-pulse" />
+                ))
+              ) : !dashboard?.revenueByBarber || Object.keys(dashboard.revenueByBarber).length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-dark-400">Nenhum faturamento</div>
+              ) : (
+                Object.entries(dashboard.revenueByBarber).map(([name, val], index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-dark-50/50 dark:bg-dark-800/30 border border-dark-100 dark:border-dark-800">
+                    <span className="text-sm font-medium text-dark-800 dark:text-dark-200">{name}</span>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(val)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

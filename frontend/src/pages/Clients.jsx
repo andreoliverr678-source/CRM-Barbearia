@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { Plus, Search, Phone, Clock, MoreVertical, AlertCircle, RefreshCw, UserX, ChevronRight, Edit2, Trash2, Eye, Calendar, MessageCircle, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useApi from '../hooks/useApi';
-import { fetchClients, createClient, updateClient, deleteClient } from '../services/api';
+import { fetchClients, createClient, updateClient, deleteClient, fetchBarbers } from '../services/api';
 
 // ------- Skeleton Row (desktop) -------
 const SkeletonRow = () => (
@@ -115,6 +115,7 @@ const Clients = () => {
   }, [search]);
 
   const { data: clientsRaw, loading, error, refetch } = useApi(fetchClients, { interval: 60_000 });
+  const { data: barbers } = useApi(fetchBarbers);
 
   // Estado local espelhado — permite patches em tempo real sem refetch completo
   const [clients, setClients] = useState([]);
@@ -154,7 +155,7 @@ const Clients = () => {
   const [deletingClient, setDeletingClient] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({ name: '', phone: '', status: 'lead', notes: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', status: 'lead', notes: '', barber_id: '' });
 
   // Prevent background scroll when modals are open
   useEffect(() => {
@@ -191,10 +192,10 @@ const Clients = () => {
   const handleOpenModal = (client = null) => {
     if (client) {
       setEditingClient(client);
-      setFormData({ name: client.name || '', phone: client.phone || '', status: client.status || 'lead', notes: client.notes || '' });
+      setFormData({ name: client.name || '', phone: client.phone || '', status: client.status || 'lead', notes: client.notes || '', barber_id: client.barber_id || '' });
     } else {
       setEditingClient(null);
-      setFormData({ name: '', phone: '', status: 'lead', notes: '' });
+      setFormData({ name: '', phone: '', status: 'lead', notes: '', barber_id: '' });
     }
     setIsModalOpen(true);
   };
@@ -315,6 +316,9 @@ const Clients = () => {
                 <p className="font-semibold text-dark-900 dark:text-white text-sm truncate">
                   {client.name || <span className="text-dark-400 italic">Sem nome</span>}
                 </p>
+                {client.barber_name && (
+                  <p className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold mb-0.5">★ Fixo: {client.barber_name}</p>
+                )}
                 <div className="flex items-center gap-1 mt-0.5">
                   <Phone size={12} className="text-dark-400 shrink-0" />
                   <span className="text-xs text-dark-500 dark:text-dark-400 truncate">{client.phone || '—'}</span>
@@ -387,9 +391,14 @@ const Clients = () => {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20 shrink-0">
                           {getInitial(client)}
                         </div>
-                        <span className="font-medium text-dark-900 dark:text-white">
-                          {client.name || <span className="text-dark-400 italic">Sem nome</span>}
-                        </span>
+                        <div>
+                          <span className="font-medium text-dark-900 dark:text-white block">
+                            {client.name || <span className="text-dark-400 italic">Sem nome</span>}
+                          </span>
+                          {client.barber_name && (
+                            <span className="text-xs text-primary-600 dark:text-primary-400 font-semibold">★ Fixo: {client.barber_name}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-dark-600 dark:text-dark-300">
@@ -507,6 +516,19 @@ const Clients = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-1.5">Barbeiro Fixo</label>
+                <select 
+                  value={formData.barber_id} 
+                  onChange={(e) => setFormData({...formData, barber_id: e.target.value})}
+                  className="w-full bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white outline-none transition-shadow"
+                >
+                  <option value="">Nenhum (Sem barbeiro fixo)</option>
+                  {barbers?.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-1.5">Observações</label>
                 <textarea 
                   rows="4"
@@ -573,6 +595,12 @@ const Clients = () => {
                   <p className="text-dark-500 dark:text-dark-400 text-xs font-bold uppercase tracking-wider mb-1.5">Cadastrado em</p>
                   <p className="text-dark-900 dark:text-white font-medium">{formatDate(viewingClient.created_at)}</p>
                 </div>
+                {viewingClient.barber_name && (
+                  <div className="bg-dark-50 dark:bg-dark-800 rounded-2xl p-4">
+                    <p className="text-dark-500 dark:text-dark-400 text-xs font-bold uppercase tracking-wider mb-1.5">Barbeiro Fixo</p>
+                    <p className="text-primary-600 dark:text-primary-400 font-semibold">★ {viewingClient.barber_name}</p>
+                  </div>
+                )}
                 {viewingClient.notes && (
                   <div className="bg-dark-50 dark:bg-dark-800 rounded-2xl p-4">
                     <p className="text-dark-500 dark:text-dark-400 text-xs font-bold uppercase tracking-wider mb-1.5">Observações</p>

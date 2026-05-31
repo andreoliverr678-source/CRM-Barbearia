@@ -20,6 +20,9 @@ const mapToFrontend = (a) => ({
   reminder_24h_sent:   a.lembrete_24h_enviado || false,
   reminder_2h_sent:    a.lembrete_2h_enviado  || false,
   created_at:          a.criado_em,
+  barber_id:           a.barbeiro_id || null,
+  barber_name:         a.barbeiros ? a.barbeiros.nome : null,
+  barber_avatar:       a.barbeiros ? a.barbeiros.avatar : null,
 });
 
 const mapToBackend = (a) => {
@@ -32,6 +35,7 @@ const mapToBackend = (a) => {
   if (a.date         !== undefined) data.data        = a.date;
   if (a.time         !== undefined) data.hora        = a.time;
   if (a.status       !== undefined) data.status      = a.status;
+  if (a.barber_id    !== undefined) data.barbeiro_id = a.barber_id || null;
   // Build combined datetime for reminder scheduling
   if (a.date && a.time) {
     data.data_hora_agendamento = `${a.date}T${a.time}:00`;
@@ -79,9 +83,15 @@ router.get('/', async (req, res) => {
     // Cancela agendamentos pendentes vencidos antes de retornar a lista
     await cancelarAgendamentosVencidos();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('agendamentos')
-      .select('*')
+      .select('*, barbeiros(nome, avatar)');
+
+    if (req.query.barber_id) {
+      query = query.eq('barbeiro_id', req.query.barber_id);
+    }
+
+    const { data, error } = await query
       .order('data', { ascending: true })
       .order('hora', { ascending: true });
 
@@ -102,7 +112,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('agendamentos')
-      .select('*')
+      .select('*, barbeiros(nome, avatar)')
       .eq('id', req.params.id)
       .single();
 
@@ -130,15 +140,34 @@ router.post('/', async (req, res) => {
     }
 
     // Verifica conflito de horário
-    const { data: existing } = await supabase
+    let conflictQuery = supabase
       .from('agendamentos')
       .select('id')
       .eq('data', backendData.data)
       .eq('hora', backendData.hora)
       .not('status', 'eq', 'cancelado');
 
+    if (backendData.barbeiro_id) {
+      conflictQuery = conflictQuery.eq('barbeiro_id', backendData.barbeiro_id);
+    } else {
+      conflictQuery = conflictQuery.is('barbeiro_id', null);
+    }
+
+    const { data: existing } = await conflictQuery;
+
     if (existing && existing.length > 0) {
-      return res.status(409).json({ error: 'Já existe um agendamento para este horário.' });
+      return res.status(409).json({ error: 'Já existe um agendamento para este barbeiro neste horário.' });
+    }
+
+    // Se houver barbeiro, busca os dados dele para retornar na resposta mapeada
+    let barberInfo = null;
+    if (backendData.barbeiro_id) {
+      const { data: barber } = await supabase
+        .from('barbeiros')
+        .select('nome, avatar')
+        .eq('id', backendData.barbeiro_id)
+        .single();
+      barberInfo = barber;
     }
 
     const { data, error } = await supabase
@@ -150,6 +179,11 @@ router.post('/', async (req, res) => {
     if (error) {
       console.error('[appointments] Erro ao criar agendamento:', error.message);
       return res.status(500).json({ error: 'Erro ao criar agendamento', details: error.message });
+    }
+
+    // Vincula barberInfo ao objeto retornado
+    if (data && barberInfo) {
+      data.barbeiros = barberInfo;
     }
 
     // Emite evento realtime
@@ -174,9 +208,20 @@ router.put('/:id', async (req, res) => {
   try {
     const backendData = mapToBackend(req.body);
 
-    // Verifica conflito se está mudando data/hora
+    // Verifica conflito se está mudando data/hora ou barbeiro
     if (backendData.data && backendData.hora) {
-      const { data: existing } = await supabase
+      let bId = backendData.barbeiro_id;
+      if (bId === undefined) {
+        // Busca barbeiro atual para validação de conflito se não foi informado no PUT
+        const { data: currentAppt } = await supabase
+          .from('agendamentos')
+          .select('barbeiro_id')
+          .eq('id', req.params.id)
+          .single();
+        bId = currentAppt?.barbeiro_id || null;
+      }
+
+      let conflictQuery = supabase
         .from('agendamentos')
         .select('id')
         .eq('data', backendData.data)
@@ -184,11 +229,23 @@ router.put('/:id', async (req, res) => {
         .not('id', 'eq', req.params.id)
         .not('status', 'eq', 'cancelado');
 
+      if (bId) {
+        conflictQuery = conflictQuery.eq('barbeiro_id', bId);
+      } else {
+        conflictQuery = conflictQuery.is('barbeiro_id', null);
+      }
+
+      const { data: existing } = await conflictQuery;
+
       if (existing && existing.length > 0) {
-        return res.status(409).json({ error: 'Já existe um agendamento para este horário.' });
+        return res.status(409).json({ error: 'Já existe um agendamento para este barbeiro neste horário.' });
       }
     }
 
+    // Se houver alteração de barbeiro_id ou o agendamento atual tiver barbeiro, busca os dados dele
+    let barberInfo = null;
+    const targetBarberId = backendData.barbeiro_id !== undefined ? backendData.barbeiro_id : null;
+    
     const { data, error } = await supabase
       .from('agendamentos')
       .update(backendData)
@@ -199,6 +256,15 @@ router.put('/:id', async (req, res) => {
     if (error) {
       console.error('[appointments] Erro ao atualizar agendamento:', error.message);
       return res.status(500).json({ error: 'Erro ao atualizar agendamento', details: error.message });
+    }
+
+    if (data && data.barbeiro_id) {
+      const { data: barber } = await supabase
+        .from('barbeiros')
+        .select('nome, avatar')
+        .eq('id', data.barbeiro_id)
+        .single();
+      data.barbeiros = barber;
     }
 
     // Emite evento realtime

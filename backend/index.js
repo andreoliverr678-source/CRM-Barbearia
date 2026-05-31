@@ -25,6 +25,8 @@ const profileRouter = require('./routes/profile');
 const dashboardRouter = require('./routes/dashboard');
 const financialRouter = require('./routes/financial');
 const servicesRouter  = require('./routes/services');
+const barbersRouter = require('./routes/barbers');
+const barberDashboardRouter = require('./routes/barberDashboard');
 const { iniciarScheduler } = require('./scheduler');
 
 app.use('/api/clients', clientsRouter);
@@ -37,6 +39,8 @@ app.use('/api/profile', profileRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/financial', financialRouter);
 app.use('/api/services',  servicesRouter);
+app.use('/api/barbers', barbersRouter);
+app.use('/api/barber/dashboard', barberDashboardRouter);
 
 // Health check
 app.get('/', (req, res) => {

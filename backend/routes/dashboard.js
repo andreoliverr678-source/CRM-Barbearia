@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
     // ── 4. Faturamento real (financial_records) ───────────────────────────────
     const { data: monthFinancial, error: finErr } = await supabase
       .from('financial_records')
-      .select('amount, service, payment_method, created_at')
+      .select('amount, service, payment_method, created_at, agendamentos(barbeiro_id, barbeiros(nome))')
       .eq('status', 'pago')
       .gte('created_at', firstDayOfMonth)
       .lt('created_at', firstDayNextMonth);
@@ -45,6 +45,13 @@ router.get('/', async (req, res) => {
     if (finErr) console.error('[dashboard] financial_records error:', finErr.message);
 
     const revenue = (monthFinancial || []).reduce((acc, r) => acc + Number(r.amount), 0);
+    
+    // Detalhar faturamento por barbeiro
+    const revenueByBarber = {};
+    (monthFinancial || []).forEach(r => {
+      const name = r.agendamentos?.barbeiros?.nome || 'Sem Barbeiro';
+      revenueByBarber[name] = (revenueByBarber[name] || 0) + Number(r.amount);
+    });
     const avgTicket = monthFinancial && monthFinancial.length > 0
       ? revenue / monthFinancial.length
       : 0;
@@ -131,6 +138,7 @@ router.get('/', async (req, res) => {
       popularServices,
       popularTimes,
       chartData,
+      revenueByBarber,
     });
 
   } catch (err) {

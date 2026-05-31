@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import useApi from '../hooks/useApi';
 import { useSocket } from '../hooks/useSocket';
 import { toast } from '../hooks/useToast';
-import { fetchAppointments, createAppointment, updateAppointment, deleteAppointment, createFinancial, fetchServices } from '../services/api';
+import { fetchAppointments, createAppointment, updateAppointment, deleteAppointment, createFinancial, fetchServices, fetchBarbers } from '../services/api';
 
 // ------- Skeleton Row (desktop) -------
 const SkeletonRow = () => (
@@ -192,6 +192,8 @@ const Appointments = () => {
 
   const { data: appointments, loading, error, refetch } = useApi(fetchAppointments, { interval: 30_000 });
   const { data: services } = useApi(fetchServices);
+  const { data: barbers } = useApi(fetchBarbers);
+  const [barberFilter, setBarberFilter] = useState('todos');
 
   // Realtime: atualiza lista ao receber eventos de agendamento
   useSocket(['appointment_created', 'appointment_updated', 'appointment_deleted', 'appointment_concluido'], () => {
@@ -215,7 +217,7 @@ const Appointments = () => {
     service_id: '',
     date: '', 
     time: '', 
-    barber: '', 
+    barber_id: '', 
     notes: '', 
     status: 'pendente' 
   });
@@ -230,11 +232,12 @@ const Appointments = () => {
           (a.service || '').toLowerCase().includes(q);
         
         const matchesStatus = statusFilter === 'todos' || a.status === statusFilter;
+        const matchesBarber = barberFilter === 'todos' || a.barber_id === barberFilter;
         
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && matchesBarber;
       }
     );
-  }, [appointments, debouncedSearch, statusFilter]);
+  }, [appointments, debouncedSearch, statusFilter, barberFilter]);
 
   const handleOpenModal = (apt = null) => {
     if (apt) {
@@ -246,7 +249,7 @@ const Appointments = () => {
         service_id: apt.service_id || '',
         date: apt.date || '', 
         time: apt.time?.substring(0, 5) || '', 
-        barber: apt.barber || '', 
+        barber_id: apt.barber_id || '', 
         notes: apt.notes || '', 
         status: apt.status || 'pendente' 
       });
@@ -259,7 +262,7 @@ const Appointments = () => {
         service_id: '',
         date: '', 
         time: '', 
-        barber: '', 
+        barber_id: '', 
         notes: '', 
         status: 'pendente' 
       });
@@ -316,16 +319,17 @@ const Appointments = () => {
       return;
     }
 
-    if (!editingApt || (editingApt.date !== formData.date || editingApt.time.substring(0, 5) !== formData.time)) {
+    if (!editingApt || (editingApt.date !== formData.date || editingApt.time.substring(0, 5) !== formData.time || editingApt.barber_id !== formData.barber_id)) {
       // Validate conflict
       const hasConflict = appointments?.some(a => 
         a.date === formData.date && 
         a.time.substring(0, 5) === formData.time && 
         a.status !== 'cancelado' &&
+        a.barber_id === (formData.barber_id || null) &&
         a.id !== editingApt?.id
       );
       if (hasConflict) {
-        toast.error('Conflito: Já existe um agendamento para este horário.');
+        toast.error('Conflito: Este barbeiro já possui um agendamento para este horário.');
         return;
       }
     }
@@ -405,15 +409,29 @@ const Appointments = () => {
 
       {/* Campo de Busca e Filtros */}
       <div className="sticky top-14 md:top-20 z-20 bg-dark-50/95 dark:bg-dark-950/95 backdrop-blur-sm py-2 -mx-4 px-4 md:mx-0 md:px-0 md:static md:bg-transparent md:backdrop-blur-none md:py-0 space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar cliente ou serviço..."
-            className="w-full bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-dark-100 placeholder-dark-400 shadow-sm transition-shadow hover:shadow-md"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="relative sm:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar cliente ou serviço..."
+              className="w-full bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-dark-100 placeholder-dark-400 shadow-sm transition-shadow hover:shadow-md"
+            />
+          </div>
+          <div>
+            <select
+              value={barberFilter}
+              onChange={(e) => setBarberFilter(e.target.value)}
+              className="w-full bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-dark-100 shadow-sm outline-none"
+            >
+              <option value="todos">Filtrar: Todos os Barbeiros</option>
+              {barbers?.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Status Filter Bar */}
@@ -472,6 +490,9 @@ const Appointments = () => {
                   {apt.service && (
                     <p className="text-xs text-dark-500 dark:text-dark-400 mt-0.5 truncate">{apt.service}</p>
                   )}
+                  {apt.barber_name && (
+                    <p className="text-[11px] text-primary-600 dark:text-primary-400 font-semibold mt-0.5">Barbeiro: {apt.barber_name}</p>
+                  )}
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="flex items-center gap-1 text-xs text-dark-400">
                       <CalendarIcon size={11} />
@@ -514,6 +535,7 @@ const Appointments = () => {
               <tr className="bg-dark-50/50 dark:bg-dark-800/50 text-dark-500 dark:text-dark-400 text-sm border-b border-dark-200 dark:border-dark-800">
                 <th className="px-6 py-4 font-medium">Cliente</th>
                 <th className="px-6 py-4 font-medium">Serviço</th>
+                <th className="px-6 py-4 font-medium">Barbeiro</th>
                 <th className="px-6 py-4 font-medium">Data</th>
                 <th className="px-6 py-4 font-medium">Horário</th>
                 <th className="px-6 py-4 font-medium">Status</th>
@@ -553,6 +575,9 @@ const Appointments = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-dark-600 dark:text-dark-300">{apt.service || '—'}</td>
+                    <td className="px-6 py-4 text-dark-600 dark:text-dark-300 font-semibold text-primary-600 dark:text-primary-400">
+                      {apt.barber_name || <span className="text-dark-400 italic font-normal">Sem barbeiro</span>}
+                    </td>
                     <td className="px-6 py-4 text-dark-600 dark:text-dark-300">
                       <div className="flex items-center gap-2">
                         <CalendarIcon size={16} className="text-dark-400" />
@@ -696,13 +721,16 @@ const Appointments = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-1.5">Barbeiro</label>
-                  <input 
-                    type="text" 
-                    value={formData.barber} 
-                    onChange={(e) => setFormData({...formData, barber: e.target.value})} 
-                    placeholder="Nome do profissional"
+                  <select 
+                    value={formData.barber_id} 
+                    onChange={(e) => setFormData({...formData, barber_id: e.target.value})}
                     className="w-full bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white outline-none"
-                  />
+                  >
+                    <option value="">Sem barbeiro específico</option>
+                    {barbers?.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-1.5">Status</label>

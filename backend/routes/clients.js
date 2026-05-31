@@ -15,6 +15,9 @@ const mapToFrontend = (c) => ({
   reativacao_enviada: c.reativacao_enviada || false,
   created_at: c.criado_em,
   updated_at: c.ultima_interacao || c.criado_em,
+  barber_id: c.barbeiro_id || null,
+  barber_name: c.barbeiros ? c.barbeiros.nome : null,
+  barber_avatar: c.barbeiros ? c.barbeiros.avatar : null,
 });
 
 const mapToBackend = (c) => {
@@ -23,15 +26,22 @@ const mapToBackend = (c) => {
   if (c.phone !== undefined) data.telefone = c.phone;
   if (c.notes !== undefined) data.observacoes = c.notes;
   if (c.status !== undefined) data.status = c.status;
+  if (c.barber_id !== undefined) data.barbeiro_id = c.barber_id || null;
   return data;
 };
 
 // GET /api/clients — busca todos os clientes
 router.get('/', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('clientes')
-      .select('*')
+      .select('*, barbeiros(nome, avatar)');
+
+    if (req.query.barber_id) {
+      query = query.eq('barbeiro_id', req.query.barber_id);
+    }
+
+    const { data, error } = await query
       .order('criado_em', { ascending: false });
 
     if (error) {
@@ -51,7 +61,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select('*, barbeiros(nome, avatar)')
       .eq('id', req.params.id)
       .single();
 
@@ -83,6 +93,16 @@ router.post('/', async (req, res) => {
       backendData.status = 'lead';
     }
 
+    let barberInfo = null;
+    if (backendData.barbeiro_id) {
+      const { data: barber } = await supabase
+        .from('barbeiros')
+        .select('nome, avatar')
+        .eq('id', backendData.barbeiro_id)
+        .single();
+      barberInfo = barber;
+    }
+
     const { data, error } = await supabase
       .from('clientes')
       .insert([backendData])
@@ -92,6 +112,10 @@ router.post('/', async (req, res) => {
     if (error) {
       console.error('[clients] Erro ao criar cliente:', error.message);
       return res.status(500).json({ error: 'Erro ao criar cliente', details: error.message });
+    }
+
+    if (data && barberInfo) {
+      data.barbeiros = barberInfo;
     }
 
     res.status(201).json(mapToFrontend(data));
@@ -116,6 +140,15 @@ router.put('/:id', async (req, res) => {
     if (error) {
       console.error('[clients] Erro ao atualizar cliente:', error.message);
       return res.status(500).json({ error: 'Erro ao atualizar cliente', details: error.message });
+    }
+
+    if (data && data.barbeiro_id) {
+      const { data: barber } = await supabase
+        .from('barbeiros')
+        .select('nome, avatar')
+        .eq('id', data.barbeiro_id)
+        .single();
+      data.barbeiros = barber;
     }
 
     res.json(mapToFrontend(data));
