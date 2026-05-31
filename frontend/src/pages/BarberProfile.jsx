@@ -155,6 +155,33 @@ const AvatarSection = ({ barber, onAvatarUpdated }) => {
   );
 };
 
+// ─── PasswordField (FORA do PasswordSection para evitar remount a cada keystroke) ──
+const PasswordField = ({ id, label, field, showKey, form, show, setForm, setShow }) => (
+  <div>
+    <label htmlFor={id} className="block text-xs font-semibold text-dark-400 mb-1.5">
+      {label}
+    </label>
+    <div className="relative">
+      <input
+        id={id}
+        type={show[showKey] ? 'text' : 'password'}
+        value={form[field]}
+        onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+        className="w-full bg-dark-950 border border-dark-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white placeholder-dark-600 focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/20 transition-all"
+        placeholder="••••••••"
+        autoComplete="new-password"
+      />
+      <button
+        type="button"
+        onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors"
+      >
+        {show[showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </div>
+  </div>
+);
+
 // ─── Password Section ─────────────────────────────────────────────
 const PasswordSection = () => {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -207,31 +234,7 @@ const PasswordSection = () => {
     }
   };
 
-  const PasswordField = ({ id, label, field, showKey }) => (
-    <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-dark-400 mb-1.5">
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          id={id}
-          type={show[showKey] ? 'text' : 'password'}
-          value={form[field]}
-          onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-          className="w-full bg-dark-950 border border-dark-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white placeholder-dark-600 focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/20 transition-all"
-          placeholder="••••••••"
-          autoComplete="new-password"
-        />
-        <button
-          type="button"
-          onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors"
-        >
-          {show[showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
-      </div>
-    </div>
-  );
+  const fieldProps = { form, show, setForm, setShow };
 
   return (
     <div className="bg-dark-900 border border-dark-800 rounded-2xl p-5">
@@ -252,8 +255,8 @@ const PasswordSection = () => {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
-        <PasswordField id="current-pw" label="Senha Atual" field="currentPassword" showKey="current" />
-        <PasswordField id="new-pw" label="Nova Senha" field="newPassword" showKey="new" />
+        <PasswordField id="current-pw" label="Senha Atual" field="currentPassword" showKey="current" {...fieldProps} />
+        <PasswordField id="new-pw" label="Nova Senha" field="newPassword" showKey="new" {...fieldProps} />
 
         {/* Strength bar */}
         {form.newPassword && (
@@ -272,7 +275,7 @@ const PasswordSection = () => {
           </div>
         )}
 
-        <PasswordField id="confirm-pw" label="Confirmar Nova Senha" field="confirmPassword" showKey="confirm" />
+        <PasswordField id="confirm-pw" label="Confirmar Nova Senha" field="confirmPassword" showKey="confirm" {...fieldProps} />
 
         {/* Match indicator */}
         {form.confirmPassword && (
@@ -300,6 +303,7 @@ const PasswordSection = () => {
     </div>
   );
 };
+
 
 // ─── Info Card (readonly) ─────────────────────────────────────────
 const InfoCard = ({ barber }) => (
