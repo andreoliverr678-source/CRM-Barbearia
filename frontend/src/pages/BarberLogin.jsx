@@ -77,7 +77,7 @@ const BarberLogin = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="carlos@barbearia.com"
+                autoComplete="off"
                 className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white transition-all outline-none"
               />
             </div>
@@ -93,7 +93,7 @@ const BarberLogin = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  autoComplete="new-password"
                   className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white transition-all outline-none"
                 />
                 <button
