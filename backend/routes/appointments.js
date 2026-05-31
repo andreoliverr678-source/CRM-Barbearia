@@ -139,36 +139,66 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Os campos "date" e "time" são obrigatórios' });
     }
 
-    // Verifica conflito de horário
-    let conflictQuery = supabase
+    // ── Auto-atribuição de barbeiro livre ────────────────────────────────────
+    // Se barbeiro_id não foi informado (null ou string vazia), buscar o próximo livre
+    if (!backendData.barbeiro_id) {
+      // 1. Buscar todos os barbeiros ativos
+      const { data: barbeirosAtivos, error: barbeirosErr } = await supabase
+        .from('barbeiros')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome', { ascending: true });
+
+      if (barbeirosErr || !barbeirosAtivos || barbeirosAtivos.length === 0) {
+        return res.status(409).json({ error: 'Nenhum barbeiro ativo disponível no momento.' });
+      }
+
+      // 2. Buscar barbeiros que já têm agendamento neste horário
+      const { data: ocupados } = await supabase
+        .from('agendamentos')
+        .select('barbeiro_id')
+        .eq('data', backendData.data)
+        .eq('hora', backendData.hora)
+        .not('status', 'eq', 'cancelado')
+        .not('barbeiro_id', 'is', null);
+
+      const idsOcupados = new Set((ocupados || []).map(a => a.barbeiro_id));
+
+      // 3. Encontrar o primeiro barbeiro livre
+      const barbeiroLivre = barbeirosAtivos.find(b => !idsOcupados.has(b.id));
+
+      if (!barbeiroLivre) {
+        return res.status(409).json({
+          error: 'Todos os barbeiros estão ocupados neste horário. Por favor, escolha outro horário.'
+        });
+      }
+
+      // 4. Atribuir o barbeiro livre
+      backendData.barbeiro_id = barbeiroLivre.id;
+      console.log(`[appointments] Auto-atribuindo barbeiro "${barbeiroLivre.nome}" (${barbeiroLivre.id}) para ${backendData.data} ${backendData.hora}`);
+    }
+
+    // Verifica conflito de horário (com barbeiro já definido)
+    const { data: existing } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', backendData.data)
       .eq('hora', backendData.hora)
+      .eq('barbeiro_id', backendData.barbeiro_id)
       .not('status', 'eq', 'cancelado');
-
-    if (backendData.barbeiro_id) {
-      conflictQuery = conflictQuery.eq('barbeiro_id', backendData.barbeiro_id);
-    } else {
-      conflictQuery = conflictQuery.is('barbeiro_id', null);
-    }
-
-    const { data: existing } = await conflictQuery;
 
     if (existing && existing.length > 0) {
       return res.status(409).json({ error: 'Já existe um agendamento para este barbeiro neste horário.' });
     }
 
-    // Se houver barbeiro, busca os dados dele para retornar na resposta mapeada
+    // Busca dados do barbeiro para retornar na resposta mapeada
     let barberInfo = null;
-    if (backendData.barbeiro_id) {
-      const { data: barber } = await supabase
-        .from('barbeiros')
-        .select('nome, avatar')
-        .eq('id', backendData.barbeiro_id)
-        .single();
-      barberInfo = barber;
-    }
+    const { data: barber } = await supabase
+      .from('barbeiros')
+      .select('nome, avatar')
+      .eq('id', backendData.barbeiro_id)
+      .single();
+    barberInfo = barber;
 
     const { data, error } = await supabase
       .from('agendamentos')
@@ -194,14 +224,13 @@ router.post('/', async (req, res) => {
       await emitClientStatusUpdate(io, data.telefone);
     }
 
-    // ── Lembrete 24h: será disparado apenas pelo scheduler para agendamentos com +24h antecedência ──
-
     res.status(201).json(mapToFrontend(data));
   } catch (err) {
     console.error('[appointments] Erro inesperado:', err.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
+
 
 // ── PUT /api/appointments/:id ────────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
