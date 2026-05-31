@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('servicos')
       .select('*')
-      .order('nome', { ascending: true });
+      .order('ordem', { ascending: true });
     if (error) throw error;
     res.json(data || []);
   } catch (err) {

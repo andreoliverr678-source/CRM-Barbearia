@@ -694,9 +694,9 @@ const Appointments = () => {
                     className="w-full bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white outline-none"
                   >
                     <option value="">Selecione um serviço</option>
-                    {services?.map(s => (
+                    {services ? [...services].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map(s => (
                       <option key={s.id} value={s.id}>{s.nome} - R$ {s.preco}</option>
-                    ))}
+                    )) : null}
                   </select>
                 </div>
                 <div>

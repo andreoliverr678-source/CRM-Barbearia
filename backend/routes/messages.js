@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('conversas')
       .select('*')
-      .order('criado_em', { ascending: true });
+      .order('ordem', { ascending: true });
 
     if (error) {
       console.error('[messages] Erro ao buscar conversas:', error.message);
@@ -47,7 +47,7 @@ router.get('/:phone', async (req, res) => {
       .from('conversas')
       .select('*')
       .eq('telefone', req.params.phone)
-      .order('criado_em', { ascending: true });
+      .order('ordem', { ascending: true });
 
     if (error) {
       return res.status(500).json({ error: 'Erro ao buscar mensagens', details: error.message });
