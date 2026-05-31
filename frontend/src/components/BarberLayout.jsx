@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Calendar, Users, BarChart3, LogOut, Scissors } from 'lucide-react';
+import { Calendar, Users, BarChart3, LogOut, Scissors, UserCircle2 } from 'lucide-react';
 import { useBarberAuth } from '../context/BarberAuthContext';
 
 const BarberLayout = () => {
@@ -16,6 +16,7 @@ const BarberLayout = () => {
     { name: 'Agenda', icon: <Calendar size={22} />, path: '/barber' },
     { name: 'Clientes', icon: <Users size={22} />, path: '/barber/clients' },
     { name: 'Desempenho', icon: <BarChart3 size={22} />, path: '/barber/dashboard' },
+    { name: 'Perfil', icon: <UserCircle2 size={22} />, path: '/barber/profile' },
   ];
 
   return (

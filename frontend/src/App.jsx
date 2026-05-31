@@ -18,6 +18,7 @@ import WhatsApp from './pages/WhatsApp';
 import BarberAgenda from './pages/BarberAgenda';
 import BarberClients from './pages/BarberClients';
 import BarberDashboard from './pages/BarberDashboard';
+import BarberProfile from './pages/BarberProfile';
 
 const App = () => {
   return (
@@ -48,6 +49,7 @@ const App = () => {
                   <Route index element={<BarberAgenda />} />
                   <Route path="clients" element={<BarberClients />} />
                   <Route path="dashboard" element={<BarberDashboard />} />
+                  <Route path="profile" element={<BarberProfile />} />
                 </Route>
               </Route>
             </Routes>
