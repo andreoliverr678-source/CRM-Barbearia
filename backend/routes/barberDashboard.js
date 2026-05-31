@@ -34,9 +34,10 @@ router.get('/', authMiddleware, async (req, res) => {
         .eq('barbeiro_id', barberId),
 
       // 3. Faturamento mensal gerado por este barbeiro
+      // Usa inner join para filtrar apenas registros do barbeiro logado
       supabase
         .from('financial_records')
-        .select('amount, service')
+        .select('amount, service, agendamentos!inner(barbeiro_id)')
         .eq('status', 'pago')
         .eq('agendamentos.barbeiro_id', barberId)
         .gte('created_at', firstDayOfMonth)
