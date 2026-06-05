@@ -114,6 +114,7 @@ async function verificarLembretes24h() {
         hora:                  ag.hora,
         data:                  ag.data,
         data_hora_agendamento: ag.data_hora_agendamento,
+        dia_relativo:          'Amanhã',
       });
 
       // Marca como enviado para evitar reenvio
@@ -159,6 +160,9 @@ async function verificarAgendamentosDentroDe24h() {
       const diffMin = (new Date(ag.data_hora_agendamento) - agora) / (1000 * 60);
 
       if (diffMin > 120) {
+        const dataHoje = toISO(agora).substring(0, 10);
+        const dia_relativo = (ag.data === dataHoje) ? 'Hoje' : 'Amanhã';
+
         // Envia lembrete 24h imediato apenas se faltar mais de 2h
         await dispararWebhook('/webhook/crm-followup-confirmacao', {
           agendamento_id:        ag.id,
@@ -168,6 +172,7 @@ async function verificarAgendamentosDentroDe24h() {
           data:                  ag.data,
           servico:               ag.servico,
           data_hora_agendamento: ag.data_hora_agendamento,
+          dia_relativo,
         });
 
         await supabase
