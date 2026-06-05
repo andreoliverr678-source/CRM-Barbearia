@@ -20,7 +20,7 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate('/', { replace: true });
+      navigate('/admin', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {

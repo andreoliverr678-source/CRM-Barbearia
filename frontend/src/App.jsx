@@ -19,6 +19,7 @@ import BarberAgenda from './pages/BarberAgenda';
 import BarberClients from './pages/BarberClients';
 import BarberDashboard from './pages/BarberDashboard';
 import BarberProfile from './pages/BarberProfile';
+import LandingPage from './pages/LandingPage';
 
 const App = () => {
   return (
@@ -28,12 +29,13 @@ const App = () => {
           <Router>
             <Routes>
               {/* Rotas públicas */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/barber/login" element={<BarberLogin />} />
 
               {/* Rotas protegidas do Administrador */}
               <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<Layout />}>
+                <Route path="/admin" element={<Layout />}>
                   <Route index element={<Dashboard />} />
                   <Route path="clients" element={<Clients />} />
                   <Route path="appointments" element={<Appointments />} />

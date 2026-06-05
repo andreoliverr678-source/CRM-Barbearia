@@ -13,12 +13,12 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
-  { name: 'Dashboard',     icon: <LayoutDashboard size={20} />, path: '/' },
-  { name: 'Clientes',      icon: <Users size={20} />,           path: '/clients' },
-  { name: 'Agendamentos',  icon: <Calendar size={20} />,        path: '/appointments' },
-  { name: 'Equipe',        icon: <Scissors size={20} />,        path: '/barbers' },
-  { name: 'WhatsApp',      icon: <MessageCircle size={20} />,   path: '/whatsapp' },
-  { name: 'Configurações', icon: <Settings size={20} />,        path: '/settings' },
+  { name: 'Dashboard',     icon: <LayoutDashboard size={20} />, path: '/admin' },
+  { name: 'Clientes',      icon: <Users size={20} />,           path: '/admin/clients' },
+  { name: 'Agendamentos',  icon: <Calendar size={20} />,        path: '/admin/appointments' },
+  { name: 'Equipe',        icon: <Scissors size={20} />,        path: '/admin/barbers' },
+  { name: 'WhatsApp',      icon: <MessageCircle size={20} />,   path: '/admin/whatsapp' },
+  { name: 'Configurações', icon: <Settings size={20} />,        path: '/admin/settings' },
 ];
 
 /**
@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <NavLink
             key={item.name}
             to={item.path}
-            end={item.path === '/'}
+            end={item.path === '/admin'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 min-h-[48px] ${
                 isActive
