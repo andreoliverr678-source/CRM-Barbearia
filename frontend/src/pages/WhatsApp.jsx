@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, CheckCheck, AlertCircle, RefreshCw, MessageCircleOff, ArrowLeft, Eye, ExternalLink } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { io } from 'socket.io-client';
 import useApi from '../hooks/useApi';
+import useSocket from '../hooks/useSocket';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { fetchMessages, fetchClients } from '../services/api';
 
@@ -82,17 +82,12 @@ const WhatsApp = () => {
   };
 
   // Real-time via Socket.io — só leitura, apenas recebe mensagens novas
-  useEffect(() => {
-    const socket = io('https://agente-backend.amxxqr.easypanel.host');
-    socket.on('connect', () => console.log('Socket.io connected (Realtime WhatsApp)'));
-    socket.on('new_message', (msg) => {
-      setMessagesData((prev) => {
-        if (prev.find(m => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
+  useSocket('new_message', (msg) => {
+    setMessagesData((prev) => {
+      if (prev.find(m => m.id === msg.id)) return prev;
+      return [...prev, msg];
     });
-    return () => socket.disconnect();
-  }, []);
+  });
 
   const conversations = useMemo(() => {
     return groupByPhone(messagesData, clientsData || []);

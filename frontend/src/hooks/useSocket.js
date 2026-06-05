@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://agente-backend.amxxqr.easypanel.host';
+const SOCKET_URL = import.meta.env.VITE_API_URL 
+  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') 
+  : 'https://agente-backend.amxxqr.easypanel.host';
 
 // Singleton socket — uma única conexão para toda a app
 let _socket = null;
