@@ -34,12 +34,14 @@ const Login = () => {
         
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3 text-primary-600 dark:text-primary-500">
-            <div className="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-500/10 flex items-center justify-center">
-              <Scissors size={28} />
-            </div>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/cadeira_cheia_logo.jpg" 
+              className="w-12 h-12 rounded-2xl object-cover border border-amber-500/20" 
+              alt="Logo Cadeira Cheia" 
+            />
             <h1 className="text-3xl font-bold text-dark-900 dark:text-white tracking-wider">
-              BARBER<span className="text-primary-500">CRM</span>
+              Cadeira<span className="text-amber-500">Cheia</span>
             </h1>
           </div>
         </div>
