@@ -120,103 +120,37 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Right Preview - Interactive looking Mockup dashboard */}
+          {/* Right Preview - Desktop & Mobile Mockups */}
           <div className="lg:col-span-5 relative w-full flex justify-center lg:justify-end">
-            <div className="w-full max-w-md relative animate-fade-in">
-              {/* Decorative behind card */}
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-primary-500 to-green-600 rounded-3xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+            <div className="relative w-full max-w-lg animate-fade-in">
+              {/* Glow decoration */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary-500/10 to-green-600/10 rounded-3xl blur-2xl pointer-events-none" />
               
-              {/* Main Panel */}
-              <div className="relative glass-panel rounded-3xl p-6 border border-dark-800 bg-dark-900/90 shadow-2xl flex flex-col space-y-6">
-                
-                {/* Header of mockup */}
-                <div className="flex justify-between items-center pb-4 border-b border-dark-800">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  </div>
-                  <span className="text-xs font-semibold text-dark-400">Dashboard de Hoje</span>
+              {/* Desktop Browser frame */}
+              <div className="relative rounded-2xl border border-dark-800 bg-dark-900/90 shadow-2xl overflow-hidden p-1 pb-0">
+                <div className="flex items-center gap-1.5 px-3 py-2 border-b border-dark-850 bg-dark-950/60">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                  <span className="text-[10px] text-dark-500 ml-2 font-mono">barbercrm.com/admin</span>
                 </div>
+                <img 
+                  src="/dashboard_desktop.png" 
+                  alt="Painel Administrativo Desktop" 
+                  className="w-full h-auto object-cover rounded-b-xl"
+                />
+              </div>
 
-                {/* Dashboard Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-dark-950/50 border border-dark-800/80 rounded-2xl p-4">
-                    <p className="text-[11px] font-semibold text-dark-500 uppercase tracking-wider">Faturamento Hoje</p>
-                    <p className="text-xl font-bold text-primary-400 mt-1">R$ 455,00</p>
-                    <p className="text-[10px] text-green-500 flex items-center gap-0.5 mt-0.5 font-medium">
-                      <TrendingUp size={10} /> +12% vs ontem
-                    </p>
-                  </div>
-                  <div className="bg-dark-950/50 border border-dark-800/80 rounded-2xl p-4">
-                    <p className="text-[11px] font-semibold text-dark-500 uppercase tracking-wider">Agendamentos</p>
-                    <p className="text-xl font-bold text-white mt-1">14</p>
-                    <p className="text-[10px] text-dark-450 mt-0.5 text-dark-400">12 Confirmados</p>
-                  </div>
+              {/* Mobile Device frame overlapping */}
+              <div className="absolute -bottom-10 -left-6 w-36 sm:w-44 rounded-[24px] border-4 border-dark-800 bg-dark-950 shadow-2xl overflow-hidden">
+                <div className="h-3.5 bg-dark-800 flex items-center justify-center">
+                  <div className="w-8 h-1 rounded-full bg-dark-700" />
                 </div>
-
-                {/* Mini Schedule list mockup */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-dark-350 text-dark-300 flex items-center gap-1.5">
-                    <Calendar size={13} className="text-primary-500" />
-                    Próximos Clientes
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-dark-950/30 border border-dark-850 text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary-500/10 text-primary-400 font-semibold flex items-center justify-center text-[10px]">
-                          AM
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">Arthur Melo</p>
-                          <p className="text-[10px] text-dark-450 text-dark-400">Corte + Sobrancelha</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-white">14:30</p>
-                        <p className="text-[9px] text-primary-500 font-medium">Pendente</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-dark-950/30 border border-dark-850 text-xs opacity-75">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-dark-800 text-dark-300 font-semibold flex items-center justify-center text-[10px]">
-                          GB
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">Gustavo Borges</p>
-                          <p className="text-[10px] text-dark-450 text-dark-400">Barba Completa</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-white">15:15</p>
-                        <p className="text-[9px] text-green-500 font-medium">Confirmado</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inactive Client Alert Trigger */}
-                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400">
-                      <MessageSquare size={16} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">Fidelidade Alerta</p>
-                      <p className="text-[10px] text-red-300">32 clientes inativos há +30 dias</p>
-                    </div>
-                  </div>
-                  <a 
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] font-bold bg-red-600 hover:bg-red-500 px-2.5 py-1.5 rounded-lg text-white transition-all"
-                  >
-                    Ativar Recuperação
-                  </a>
-                </div>
-
+                <img 
+                  src="/barberapp_mobile.jpg" 
+                  alt="BarberApp Mobile" 
+                  className="w-full h-auto"
+                />
               </div>
             </div>
           </div>
@@ -304,6 +238,77 @@ const LandingPage = () => {
             </p>
           </div>
 
+        </div>
+      </section>
+
+      {/* ── SEÇÃO DE TELAS / PRINTS DO APP ───────────────────────────────────── */}
+      <section className="py-20 md:py-28 px-6 bg-dark-900/20 border-b border-dark-900 relative">
+        <div className="max-w-7xl mx-auto text-center space-y-4 mb-16">
+          <span className="text-xs font-bold text-primary-500 uppercase tracking-widest text-primary-400">Demonstração Visual</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white">
+            Uma interface pensada para facilidade de uso
+          </h2>
+          <p className="text-dark-400 text-sm md:text-base max-w-xl mx-auto">
+            Veja como o sistema se adapta perfeitamente ao seu computador e como sua equipe acompanha os horários no celular.
+          </p>
+        </div>
+
+        <div className="max-w-7xl mx-auto space-y-20">
+          {/* Painel PC */}
+          <div className="space-y-6">
+            <h3 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3 justify-center md:justify-start">
+              <span className="w-2 h-6 bg-primary-500 rounded-full inline-block" />
+              Painel Geral do Administrador (Versão Computador - 16:9)
+            </h3>
+            <div className="rounded-2xl border border-dark-850 bg-dark-900/50 p-2 shadow-2xl overflow-hidden max-w-5xl mx-auto">
+              <img 
+                src="/dashboard_desktop.png" 
+                alt="Painel Geral PC" 
+                className="w-full h-auto rounded-xl"
+              />
+            </div>
+          </div>
+
+          {/* Celulares Lado a Lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 max-w-4xl mx-auto">
+            
+            {/* Celular 1: Visão Geral Admin */}
+            <div className="space-y-6 flex flex-col items-center">
+              <h4 className="text-lg font-bold text-white flex items-center gap-2 self-start md:self-center">
+                <span className="w-2 h-5 bg-primary-500 rounded-full inline-block" />
+                Painel do Administrador (Versão Celular - 9:16)
+              </h4>
+              <div className="w-full max-w-[280px] rounded-[36px] border-8 border-dark-800 bg-dark-950 shadow-2xl overflow-hidden transition-transform hover:scale-[1.02] duration-300">
+                <img 
+                  src="/dashboard_mobile.jpg" 
+                  alt="Painel Administrador Celular" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <p className="text-sm text-dark-400 text-center max-w-xs leading-relaxed">
+                Acompanhe o faturamento mensal, total de clientes e atendimentos da semana na palma da sua mão.
+              </p>
+            </div>
+
+            {/* Celular 2: BarberApp */}
+            <div className="space-y-6 flex flex-col items-center">
+              <h4 className="text-lg font-bold text-white flex items-center gap-2 self-start md:self-center">
+                <span className="w-2 h-5 bg-primary-500 rounded-full inline-block" />
+                Minha Agenda - BarberApp (Barbeiros - 9:16)
+              </h4>
+              <div className="w-full max-w-[280px] rounded-[36px] border-8 border-dark-800 bg-dark-950 shadow-2xl overflow-hidden transition-transform hover:scale-[1.02] duration-300">
+                <img 
+                  src="/barberapp_mobile.jpg" 
+                  alt="BarberApp Celular" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <p className="text-sm text-dark-400 text-center max-w-xs leading-relaxed">
+                Seus colaboradores consultam os horários agendados, marcam serviços como concluídos e controlam o dia com facilidade.
+              </p>
+            </div>
+
+          </div>
         </div>
       </section>
 
