@@ -48,14 +48,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     >
       {/* Logo + botão fechar (mobile) */}
       <div className="h-16 md:h-20 flex items-center justify-between px-6 border-b border-dark-200 dark:border-dark-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <img 
-            src="/cadeira_cheia_logo.jpg" 
-            className="w-8 h-8 rounded-lg object-cover border border-amber-500/20" 
-            alt="Logo Cadeira Cheia" 
-          />
+        <div className="flex items-center gap-3 text-primary-600 dark:text-primary-500">
+          <Scissors size={24} />
           <h1 className="text-lg md:text-xl font-bold text-dark-900 dark:text-white tracking-wider">
-            Cadeira<span className="text-[#c5a880]">Cheia</span>
+            BARBER<span className="text-primary-500">CRM</span>
           </h1>
         </div>
         {/* Botão fechar — só no mobile */}
