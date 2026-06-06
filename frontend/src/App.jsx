@@ -20,6 +20,8 @@ import BarberClients from './pages/BarberClients';
 import BarberDashboard from './pages/BarberDashboard';
 import BarberProfile from './pages/BarberProfile';
 import LandingPage from './pages/LandingPage';
+import CadastroBarbearia from './pages/CadastroBarbearia';
+import MeusClientes from './pages/MeusClientes';
 
 const App = () => {
   return (
@@ -32,6 +34,7 @@ const App = () => {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/barber/login" element={<BarberLogin />} />
+              <Route path="/cadastro" element={<CadastroBarbearia />} />
 
               {/* Rotas protegidas do Administrador */}
               <Route element={<ProtectedRoute />}>
@@ -41,6 +44,7 @@ const App = () => {
                   <Route path="appointments" element={<Appointments />} />
                   <Route path="barbers" element={<Barbers />} />
                   <Route path="whatsapp" element={<WhatsApp />} />
+                  <Route path="meus-clientes" element={<MeusClientes />} />
                   <Route path="settings" element={<div className="p-8"><h1 className="text-2xl text-dark-900 dark:text-white">Configurações em breve...</h1></div>} />
                 </Route>
               </Route>

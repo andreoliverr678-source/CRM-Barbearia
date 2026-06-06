@@ -99,12 +99,12 @@ const LandingPage = () => {
                 Garantir Cadeira Cheia
                 <ArrowRight size={18} />
               </a>
-              <a 
-                href="#funcionalidades"
-                className="bg-dark-900 hover:bg-dark-850 text-dark-200 border border-dark-800 font-medium rounded-2xl px-8 py-4 transition-all text-center flex items-center justify-center gap-2 text-base hover:text-white"
+              <button
+                onClick={() => navigate('/cadastro')}
+                className="bg-dark-900 hover:bg-dark-850 text-amber-400 border border-amber-500/30 font-bold rounded-2xl px-8 py-4 transition-all text-center flex items-center justify-center gap-2 text-base hover:border-amber-500/60"
               >
-                Conhecer Recursos
-              </a>
+                Cadastrar Barbearia
+              </button>
             </div>
 
             {/* Quick trust proof */}
@@ -466,14 +466,21 @@ const LandingPage = () => {
             </div>
 
             <div className="relative z-10 w-full sm:w-auto flex flex-col sm:flex-row items-center gap-4 justify-center">
+              <button
+                onClick={() => navigate('/cadastro')}
+                className="bg-amber-600 hover:bg-amber-550 text-white font-bold rounded-2xl px-10 py-5 transition-all shadow-xl shadow-amber-600/30 hover:scale-[1.02] flex items-center gap-3 w-full sm:w-auto text-center justify-center text-base sm:text-lg"
+              >
+                Cadastrar Minha Barbearia
+                <ArrowRight size={20} />
+              </button>
               <a 
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-amber-600 hover:bg-amber-550 text-white font-bold rounded-2xl px-10 py-5 transition-all shadow-xl shadow-amber-600/30 hover:scale-[1.02] flex items-center gap-3 w-full sm:w-auto text-center justify-center text-base sm:text-lg"
+                className="bg-dark-800 hover:bg-dark-700 text-white font-semibold rounded-2xl px-8 py-5 transition-all border border-dark-700 flex items-center gap-3 w-full sm:w-auto text-center justify-center text-base"
               >
-                Falar Conosco no WhatsApp
-                <ArrowRight size={20} />
+                Falar no WhatsApp
+                <ArrowRight size={18} />
               </a>
             </div>
 

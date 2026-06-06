@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
+  Users2,
   Calendar,
   MessageCircle,
   Settings,
@@ -18,6 +19,7 @@ const navItems = [
   { name: 'Agendamentos',  icon: <Calendar size={20} />,        path: '/admin/appointments' },
   { name: 'Equipe',        icon: <Scissors size={20} />,        path: '/admin/barbers' },
   { name: 'WhatsApp',      icon: <MessageCircle size={20} />,   path: '/admin/whatsapp' },
+  { name: 'Meus Clientes', icon: <Users2 size={20} />,          path: '/admin/meus-clientes' },
   { name: 'Configurações', icon: <Settings size={20} />,        path: '/admin/settings' },
 ];
 

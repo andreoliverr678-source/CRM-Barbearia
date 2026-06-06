@@ -7,12 +7,13 @@ import ProfileDropdown from './ProfileDropdown';
 
 // Mapa de rotas para títulos legíveis
 const PAGE_TITLES = {
-  '/admin':             'Dashboard',
-  '/admin/clients':      'Clientes',
-  '/admin/appointments': 'Agendamentos',
-  '/admin/whatsapp':     'WhatsApp',
-  '/admin/settings':     'Configurações',
-  '/admin/barbers':      'Equipe',
+  '/admin':                 'Dashboard',
+  '/admin/clients':          'Clientes',
+  '/admin/appointments':     'Agendamentos',
+  '/admin/whatsapp':         'WhatsApp',
+  '/admin/settings':         'Configurações',
+  '/admin/barbers':          'Equipe',
+  '/admin/meus-clientes':    'Meus Clientes',
 };
 
 /**
