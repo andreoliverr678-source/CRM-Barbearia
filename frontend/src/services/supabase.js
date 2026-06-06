@@ -12,14 +12,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  * @param {Object} data - Dados do formulário de cadastro
  */
 export const createLead = async (data) => {
-  const { data: result, error } = await supabase
+  const { error } = await supabase
     .from('leads_barbearias')
-    .insert([data])
-    .select()
-    .single();
+    .insert([data]);
   if (error) throw error;
-  return result;
+  return true;
 };
+
 
 /**
  * Busca todos os leads (requer autenticação via JWT do admin).
