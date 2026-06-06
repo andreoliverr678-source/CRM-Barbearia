@@ -250,11 +250,11 @@ const MeusClientes = () => {
             onChange={(e) => setSortBy(e.target.value)}
             className="pl-9 pr-8 py-2.5 rounded-xl bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 text-sm text-dark-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-all appearance-none cursor-pointer min-w-[170px]"
           >
-            <option value="created_at_desc">Mais recente</option>
-            <option value="created_at_asc">Mais antigo</option>
-            <option value="nome_barbearia_asc">Barbearia (A-Z)</option>
-            <option value="nome_proprietario_asc">Proprietário (A-Z)</option>
-            <option value="faturamento_desc">Faturamento (Maior)</option>
+            <option value="created_at_desc">Ordem: Mais recente</option>
+            <option value="created_at_asc">Ordem: Mais antigo</option>
+            <option value="nome_barbearia_asc">Ordem: Barbearia (A-Z)</option>
+            <option value="nome_proprietario_asc">Ordem: Proprietário (A-Z)</option>
+            <option value="faturamento_desc">Ordem: Faturamento (Maior)</option>
           </select>
         </div>
 
