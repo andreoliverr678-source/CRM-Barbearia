@@ -285,6 +285,13 @@ const CadastroBarbearia = () => {
       await createLead({
         ...form,
         num_barbeiros: form.num_barbeiros ? Number(form.num_barbeiros) : null,
+        faturamento_ordem: {
+          'Até R$ 5.000': 1,
+          'R$ 5.000 - R$ 10.000': 2,
+          'R$ 10.000 - R$ 20.000': 3,
+          'R$ 20.000 - R$ 50.000': 4,
+          'Acima de R$ 50.000': 5,
+        }[form.faturamento_mensal] || null,
         cpf: form.cpf || null,
         cnpj: form.cnpj || null,
         instagram: form.instagram || null,

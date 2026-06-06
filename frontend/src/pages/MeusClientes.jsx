@@ -5,6 +5,7 @@ import {
   CheckCircle2, Clock, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight, Scissors, AtSign,
   MessageCircle, Star, StickyNote, Save, Calendar,
+  ArrowUpDown,
 } from 'lucide-react';
 import { fetchLeads, updateLead, deleteLead } from '../services/supabase';
 
@@ -87,6 +88,7 @@ const MeusClientes = () => {
   // Filtros
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [sortBy, setSortBy] = useState('created_at_desc');
   const [page, setPage] = useState(1);
   const LIMIT = 12;
 
@@ -110,6 +112,7 @@ const MeusClientes = () => {
         search: search || undefined,
         page,
         limit: LIMIT,
+        sortBy,
       });
       setLeads(data || []);
       setTotal(count || 0);
@@ -118,12 +121,12 @@ const MeusClientes = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, page]);
+  }, [search, statusFilter, page, sortBy]);
 
   useEffect(() => { load(); }, [load]);
 
   // Debounce de busca
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, sortBy]);
 
   /* ── Atualizar status ──────────────────────────────────── */
   const handleStatusChange = async (id, newStatus) => {
@@ -239,13 +242,29 @@ const MeusClientes = () => {
           />
         </div>
 
+        {/* Ordenar por */}
+        <div className="relative">
+          <ArrowUpDown size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400 pointer-events-none" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="pl-9 pr-8 py-2.5 rounded-xl bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 text-sm text-dark-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-all appearance-none cursor-pointer min-w-[170px]"
+          >
+            <option value="created_at_desc">Mais recente</option>
+            <option value="created_at_asc">Mais antigo</option>
+            <option value="nome_barbearia_asc">Barbearia (A-Z)</option>
+            <option value="nome_proprietario_asc">Proprietário (A-Z)</option>
+            <option value="faturamento_desc">Faturamento (Maior)</option>
+          </select>
+        </div>
+
         {/* Filtro status */}
         <div className="relative">
           <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400 pointer-events-none" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="pl-9 pr-8 py-2.5 rounded-xl bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 text-sm text-dark-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-all appearance-none cursor-pointer"
+            className="pl-9 pr-8 py-2.5 rounded-xl bg-white dark:bg-dark-900 border border-dark-200 dark:border-dark-800 text-sm text-dark-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 transition-all appearance-none cursor-pointer min-w-[150px]"
           >
             <option value="todos">Todos os status</option>
             {STATUS_OPTIONS.map((s) => (
@@ -282,8 +301,8 @@ const MeusClientes = () => {
           <p className="text-dark-500 dark:text-dark-400 font-medium">
             {search || statusFilter !== 'todos' ? 'Nenhum lead encontrado com esses filtros.' : 'Nenhum lead cadastrado ainda.'}
           </p>
-          {(search || statusFilter !== 'todos') && (
-            <button onClick={() => { setSearch(''); setStatusFilter('todos'); }} className="text-sm text-amber-500 hover:underline">
+          {(search || statusFilter !== 'todos' || sortBy !== 'created_at_desc') && (
+            <button onClick={() => { setSearch(''); setStatusFilter('todos'); setSortBy('created_at_desc'); }} className="text-sm text-amber-500 hover:underline">
               Limpar filtros
             </button>
           )}

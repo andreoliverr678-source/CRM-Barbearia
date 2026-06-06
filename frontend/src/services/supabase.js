@@ -24,19 +24,35 @@ export const createLead = async (data) => {
  * Busca todos os leads (requer autenticação via JWT do admin).
  * @param {Object} params - { status, search, page, limit }
  */
-export const fetchLeads = async ({ status, search, page = 1, limit = 20 } = {}) => {
+export const fetchLeads = async ({ status, search, page = 1, limit = 20, sortBy = 'created_at_desc' } = {}) => {
   let query = supabase
     .from('leads_barbearias')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range((page - 1) * limit, page * limit - 1);
+    .select('*', { count: 'exact' });
 
-  if (status && status !== 'todos') query = query.eq('status', status);
+  if (status && status !== 'todos') {
+    query = query.eq('status', status);
+  }
   if (search) {
     query = query.or(
       `nome_barbearia.ilike.%${search}%,nome_proprietario.ilike.%${search}%,email.ilike.%${search}%,whatsapp.ilike.%${search}%,cidade.ilike.%${search}%`
     );
   }
+
+  // Ordenação
+  if (sortBy === 'created_at_asc') {
+    query = query.order('created_at', { ascending: true });
+  } else if (sortBy === 'nome_barbearia_asc') {
+    query = query.order('nome_barbearia', { ascending: true });
+  } else if (sortBy === 'nome_proprietario_asc') {
+    query = query.order('nome_proprietario', { ascending: true });
+  } else if (sortBy === 'faturamento_desc') {
+    query = query.order('faturamento_ordem', { ascending: false, nullsFirst: false });
+  } else {
+    // Padrão: mais recente
+    query = query.order('created_at', { ascending: false });
+  }
+
+  query = query.range((page - 1) * limit, page * limit - 1);
 
   const { data, error, count } = await query;
   if (error) throw error;
