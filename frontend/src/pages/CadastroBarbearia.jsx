@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Scissors, User, Building2, MapPin, TrendingUp,
   ChevronRight, ChevronLeft, CheckCircle2, Phone,
-  Mail, Instagram, Clock, Users, DollarSign,
+  Mail, AtSign, Clock, Users, DollarSign,
   ArrowRight, Sparkles, Star, AlertCircle, Loader2,
 } from 'lucide-react';
 import { createLead } from '../services/supabase';
@@ -405,7 +405,7 @@ const CadastroBarbearia = () => {
                       placeholder="@barbearia"
                       value={form.instagram}
                       onChange={(v) => set('instagram', v)}
-                      icon={<Instagram size={16} />}
+                      icon={<AtSign size={16} />}
                     />
                   </Field>
                 </div>

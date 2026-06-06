@@ -3,7 +3,7 @@ import {
   Users, Search, Filter, ExternalLink, Phone, Mail,
   MapPin, Building2, TrendingUp, Eye, Trash2, X,
   CheckCircle2, Clock, AlertCircle, RefreshCw,
-  ChevronLeft, ChevronRight, Scissors, Instagram,
+  ChevronLeft, ChevronRight, Scissors, AtSign,
   MessageCircle, Star, StickyNote, Save, Calendar,
 } from 'lucide-react';
 import { fetchLeads, updateLead, deleteLead } from '../services/supabase';
