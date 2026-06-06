@@ -4,7 +4,7 @@ import {
   MapPin, Building2, TrendingUp, Eye, Trash2, X,
   CheckCircle2, Clock, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight, Scissors, AtSign,
-  MessageCircle, Star, StickyNote, Save, Calendar,
+  MessageCircle, Star, StickyNote, Save, Calendar, Instagram,
 } from 'lucide-react';
 import { fetchLeads, updateLead, deleteLead } from '../services/supabase';
 
@@ -44,6 +44,16 @@ const FATURAMENTO_ORDER = [
   'Até R$ 5.000', 'R$ 5.000 - R$ 10.000', 'R$ 10.000 - R$ 20.000',
   'R$ 20.000 - R$ 50.000', 'Acima de R$ 50.000',
 ];
+
+const DIA_MAP = {
+  seg: 'Segunda-feira',
+  ter: 'Terça-feira',
+  qua: 'Quarta-feira',
+  qui: 'Quinta-feira',
+  sex: 'Sexta-feira',
+  sab: 'Sábado',
+  dom: 'Domingo',
+};
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS
@@ -487,6 +497,42 @@ const MeusClientes = () => {
                     {selected.servicos_interesse.map((s) => (
                       <span key={s} className="px-3 py-1 rounded-lg text-xs font-semibold bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20">{s}</span>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Barbeiros Cadastrados */}
+              {selected.barbeiros_nomes?.length > 0 && (
+                <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-2xl">
+                  <p className="text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Users size={13} /> Barbeiros Cadastrados ({selected.barbeiros_nomes.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selected.barbeiros_nomes.map((nome, idx) => (
+                      <span key={idx} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-dark-900 text-dark-800 dark:text-dark-200 border border-dark-200 dark:border-dark-700 shadow-sm">
+                        {nome}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Horários por Dia */}
+              {selected.horarios_por_dia && typeof selected.horarios_por_dia === 'object' && Object.keys(selected.horarios_por_dia).length > 0 && (
+                <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-2xl">
+                  <p className="text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Clock size={13} /> Horários de Funcionamento por Dia
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-dark-700 dark:text-dark-200">
+                    {Object.entries(selected.horarios_por_dia).map(([dia, h]) => {
+                      const label = DIA_MAP[dia] || dia.toUpperCase();
+                      return (
+                        <div key={dia} className="flex justify-between items-center border-b border-dark-200 dark:border-dark-700 pb-1.5">
+                          <span className="font-semibold text-xs text-dark-500 dark:text-dark-400">{label}</span>
+                          <span className="text-xs font-bold text-dark-800 dark:text-dark-100">{h.abertura} às {h.fechamento}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

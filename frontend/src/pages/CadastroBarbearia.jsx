@@ -112,7 +112,13 @@ const CadastroBarbearia = () => {
     servicos_interesse: [],
     como_conheceu: '',
     observacoes: '',
+    barbeiros_nomes: [],
+    horarios_por_dia: {},
   });
+
+  const [horariosIguais, setHorariosIguais] = useState(true);
+  const [customServicesList, setCustomServicesList] = useState([]);
+  const [customServiceInput, setCustomServiceInput] = useState('');
 
   /* ── Handlers ─────────────────────────────────────────── */
   const set = (field, value) => {
@@ -123,9 +129,69 @@ const CadastroBarbearia = () => {
   const toggleArray = (field, value) => {
     setForm((p) => {
       const arr = p[field];
+      const isRemoving = arr.includes(value);
+      const newArr = isRemoving ? arr.filter((x) => x !== value) : [...arr, value];
+
+      let newHorarios = { ...(p.horarios_por_dia || {}) };
+      if (field === 'dias_funcionamento') {
+        if (isRemoving) {
+          delete newHorarios[value];
+        } else {
+          newHorarios[value] = horariosIguais
+            ? { abertura: p.horario_abertura || '09:00', fechamento: p.horario_fechamento || '18:00' }
+            : { abertura: '09:00', fechamento: '18:00' };
+        }
+      }
+
       return {
         ...p,
-        [field]: arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value],
+        [field]: newArr,
+        ...(field === 'dias_funcionamento' ? { horarios_por_dia: newHorarios } : {})
+      };
+    });
+  };
+
+  const addCustomService = () => {
+    const val = customServiceInput.trim();
+    if (!val) return;
+    if (!customServicesList.includes(val) && !SERVICOS.includes(val)) {
+      setCustomServicesList((p) => [...p, val]);
+    }
+    if (!form.servicos_interesse.includes(val)) {
+      toggleArray('servicos_interesse', val);
+    }
+    setCustomServiceInput('');
+  };
+
+  const handleNumBarbeirosChange = (val) => {
+    const num = parseInt(val, 10) || 0;
+    set('num_barbeiros', val);
+    setForm((p) => {
+      const currentNames = p.barbeiros_nomes || [];
+      let newNames = [...currentNames];
+      if (newNames.length < num) {
+        while (newNames.length < num) {
+          newNames.push('');
+        }
+      } else if (newNames.length > num) {
+        newNames = newNames.slice(0, num);
+      }
+      return { ...p, barbeiros_nomes: newNames };
+    });
+  };
+
+  const updateHorarioDia = (diaId, tipo, valor) => {
+    setForm((p) => {
+      const currentHorarios = p.horarios_por_dia || {};
+      return {
+        ...p,
+        horarios_por_dia: {
+          ...currentHorarios,
+          [diaId]: {
+            ...(currentHorarios[diaId] || { abertura: '09:00', fechamento: '18:00' }),
+            [tipo]: valor,
+          },
+        },
       };
     });
   };
@@ -180,6 +246,17 @@ const CadastroBarbearia = () => {
     if (!validate(4)) return;
     setLoading(true);
     try {
+      let finalHorarios = { ...(form.horarios_por_dia || {}) };
+      if (horariosIguais) {
+        finalHorarios = {};
+        form.dias_funcionamento.forEach((d) => {
+          finalHorarios[d] = {
+            abertura: form.horario_abertura || '09:00',
+            fechamento: form.horario_fechamento || '18:00',
+          };
+        });
+      }
+
       await createLead({
         ...form,
         num_barbeiros: form.num_barbeiros ? Number(form.num_barbeiros) : null,
@@ -192,8 +269,10 @@ const CadastroBarbearia = () => {
         numero: form.numero || null,
         complemento: form.complemento || null,
         bairro: form.bairro || null,
-        horario_abertura: form.horario_abertura || null,
-        horario_fechamento: form.horario_fechamento || null,
+        horario_abertura: horariosIguais ? (form.horario_abertura || null) : 'Vários',
+        horario_fechamento: horariosIguais ? (form.horario_fechamento || null) : 'Vários',
+        horarios_por_dia: finalHorarios,
+        barbeiros_nomes: (form.barbeiros_nomes || []).filter((name) => name.trim() !== ''),
         observacoes: form.observacoes || null,
         nota_interna: null,
       });
@@ -502,7 +581,7 @@ const CadastroBarbearia = () => {
                       min="1"
                       placeholder="Ex: 3"
                       value={form.num_barbeiros}
-                      onChange={(v) => set('num_barbeiros', v)}
+                      onChange={handleNumBarbeirosChange}
                       icon={<Users size={16} />}
                     />
                   </Field>
@@ -518,25 +597,32 @@ const CadastroBarbearia = () => {
                     </select>
                   </Field>
 
-                  {/* Horários */}
-                  <Field label="Horário de Abertura" error={errors.horario_abertura}>
-                    <Input
-                      id="horario_abertura"
-                      type="time"
-                      value={form.horario_abertura}
-                      onChange={(v) => set('horario_abertura', v)}
-                      icon={<Clock size={16} />}
-                    />
-                  </Field>
-                  <Field label="Horário de Fechamento" error={errors.horario_fechamento}>
-                    <Input
-                      id="horario_fechamento"
-                      type="time"
-                      value={form.horario_fechamento}
-                      onChange={(v) => set('horario_fechamento', v)}
-                      icon={<Clock size={16} />}
-                    />
-                  </Field>
+                  {/* Nomes dos Barbeiros Dinâmicos */}
+                  {form.num_barbeiros && Number(form.num_barbeiros) > 0 && (
+                    <div className="md:col-span-2 space-y-4 p-5 bg-dark-900/40 border border-dark-800 rounded-2xl animate-fade-in">
+                      <label className="block text-sm font-semibold text-dark-200">Nomes dos Barbeiros</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {Array.from({ length: Number(form.num_barbeiros) }).map((_, idx) => (
+                          <div key={idx} className="flex flex-col gap-1.5">
+                            <label className="text-xs text-dark-400 font-semibold">Barbeiro {idx + 1}</label>
+                            <Input
+                              id={`barbeiro_nome_${idx}`}
+                              placeholder={`Ex: Carlos Alberto`}
+                              value={form.barbeiros_nomes?.[idx] || ''}
+                              onChange={(v) => {
+                                setForm((p) => {
+                                  const list = [...(p.barbeiros_nomes || [])];
+                                  list[idx] = v;
+                                  return { ...p, barbeiros_nomes: list };
+                                });
+                              }}
+                              icon={<User size={14} />}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Dias de funcionamento */}
                   <div className="md:col-span-2">
@@ -559,11 +645,123 @@ const CadastroBarbearia = () => {
                     </div>
                   </div>
 
+                  {/* Horários */}
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="horarios_iguais"
+                        type="checkbox"
+                        checked={horariosIguais}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setHorariosIguais(checked);
+                          if (checked) {
+                            setForm((p) => {
+                              const updated = {};
+                              p.dias_funcionamento.forEach((d) => {
+                                updated[d] = {
+                                  abertura: p.horario_abertura || '09:00',
+                                  fechamento: p.horario_fechamento || '18:00',
+                                };
+                              });
+                              return { ...p, horarios_por_dia: updated };
+                            });
+                          }
+                        }}
+                        className="rounded bg-dark-800 border-dark-700 text-amber-500 focus:ring-amber-500/50"
+                      />
+                      <label htmlFor="horarios_iguais" className="text-sm font-semibold text-dark-200">
+                        Mesmo horário de funcionamento para todos os dias
+                      </label>
+                    </div>
+
+                    {horariosIguais ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <Field label="Horário de Abertura Geral" error={errors.horario_abertura}>
+                          <Input
+                            id="horario_abertura"
+                            type="time"
+                            value={form.horario_abertura}
+                            onChange={(v) => {
+                              set('horario_abertura', v);
+                              setForm((p) => {
+                                const updated = { ...(p.horarios_por_dia || {}) };
+                                p.dias_funcionamento.forEach((d) => {
+                                  updated[d] = { ...(updated[d] || {}), abertura: v };
+                                });
+                                return { ...p, horarios_por_dia: updated };
+                              });
+                            }}
+                            icon={<Clock size={16} />}
+                          />
+                        </Field>
+                        <Field label="Horário de Fechamento Geral" error={errors.horario_fechamento}>
+                          <Input
+                            id="horario_fechamento"
+                            type="time"
+                            value={form.horario_fechamento}
+                            onChange={(v) => {
+                              set('horario_fechamento', v);
+                              setForm((p) => {
+                                const updated = { ...(p.horarios_por_dia || {}) };
+                                p.dias_funcionamento.forEach((d) => {
+                                  updated[d] = { ...(updated[d] || {}), fechamento: v };
+                                });
+                                return { ...p, horarios_por_dia: updated };
+                              });
+                            }}
+                            icon={<Clock size={16} />}
+                          />
+                        </Field>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-dark-900/40 border border-dark-800 rounded-2xl space-y-3">
+                        <label className="block text-sm font-semibold text-dark-200">Horários de funcionamento por dia</label>
+                        {form.dias_funcionamento.length === 0 ? (
+                          <p className="text-xs text-dark-500">Selecione pelo menos um dia de funcionamento acima.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {form.dias_funcionamento.map((d) => {
+                              const diaLabel = DIAS_SEMANA.find((x) => x.id === d)?.label || d;
+                              const diaHours = form.horarios_por_dia?.[d] || { abertura: '09:00', fechamento: '18:00' };
+                              return (
+                                <div key={d} className="flex flex-col gap-2 p-3 bg-dark-800/40 border border-dark-700/50 rounded-xl">
+                                  <span className="text-xs font-bold text-amber-400">{diaLabel}</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                      <Input
+                                        id={`abertura_${d}`}
+                                        type="time"
+                                        value={diaHours.abertura}
+                                        onChange={(v) => updateHorarioDia(d, 'abertura', v)}
+                                        icon={<Clock size={14} />}
+                                      />
+                                    </div>
+                                    <span className="text-xs text-dark-500 font-semibold">às</span>
+                                    <div className="flex-1">
+                                      <Input
+                                        id={`fechamento_${d}`}
+                                        type="time"
+                                        value={diaHours.fechamento}
+                                        onChange={(v) => updateHorarioDia(d, 'fechamento', v)}
+                                        icon={<Clock size={14} />}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Serviços de interesse */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-dark-200 mb-3">Serviços Oferecidos</label>
                     <div className="flex flex-wrap gap-2">
-                      {SERVICOS.map((s) => (
+                      {[...SERVICOS, ...customServicesList].map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -577,6 +775,30 @@ const CadastroBarbearia = () => {
                           {s}
                         </button>
                       ))}
+                    </div>
+
+                    {/* Input de serviços customizados */}
+                    <div className="mt-4 flex gap-2 max-w-sm">
+                      <input
+                        type="text"
+                        placeholder="Outro serviço (Ex: Luzes, Selagem...)"
+                        value={customServiceInput}
+                        onChange={(e) => setCustomServiceInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCustomService();
+                          }
+                        }}
+                        className="flex-1 bg-dark-800 border border-dark-700 rounded-xl px-3 py-2 text-xs text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={addCustomService}
+                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl px-4 py-2 text-xs transition-all hover:scale-[1.02]"
+                      >
+                        Adicionar
+                      </button>
                     </div>
                   </div>
 
