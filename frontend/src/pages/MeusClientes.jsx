@@ -4,7 +4,7 @@ import {
   MapPin, Building2, TrendingUp, Eye, Trash2, X,
   CheckCircle2, Clock, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight, Scissors, AtSign,
-  MessageCircle, Star, StickyNote, Save, Calendar, Instagram,
+  MessageCircle, Star, StickyNote, Save, Calendar,
 } from 'lucide-react';
 import { fetchLeads, updateLead, deleteLead } from '../services/supabase';
 
@@ -633,6 +633,25 @@ const MeusClientes = () => {
 /* ─────────────────────────────────────────────────────────────
    SUBCOMPONENTE
 ───────────────────────────────────────────────────────────── */
+const Instagram = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={props.size || 24}
+    height={props.size || 24}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
+
 const InfoBlock = ({ icon: Icon, label, value, link }) => {
   if (!value && value !== 0) return null;
   return (
