@@ -110,6 +110,7 @@ const CadastroBarbearia = () => {
     horario_fechamento: '',
     dias_funcionamento: [],
     servicos_interesse: [],
+    servicos_detalhes: {},
     como_conheceu: '',
     observacoes: '',
     barbeiros_nomes: [],
@@ -143,12 +144,36 @@ const CadastroBarbearia = () => {
         }
       }
 
+      // When adding a service, initialize its detail entry
+      let newDetalhes = { ...(p.servicos_detalhes || {}) };
+      if (field === 'servicos_interesse') {
+        if (isRemoving) {
+          delete newDetalhes[value];
+        } else {
+          newDetalhes[value] = { valor: '', duracao: '' };
+        }
+      }
+
       return {
         ...p,
         [field]: newArr,
-        ...(field === 'dias_funcionamento' ? { horarios_por_dia: newHorarios } : {})
+        ...(field === 'dias_funcionamento' ? { horarios_por_dia: newHorarios } : {}),
+        ...(field === 'servicos_interesse' ? { servicos_detalhes: newDetalhes } : {}),
       };
     });
+  };
+
+  const updateServicoDetalhe = (servico, campo, valor) => {
+    setForm((p) => ({
+      ...p,
+      servicos_detalhes: {
+        ...(p.servicos_detalhes || {}),
+        [servico]: {
+          ...(p.servicos_detalhes?.[servico] || { valor: '', duracao: '' }),
+          [campo]: valor,
+        },
+      },
+    }));
   };
 
   const addCustomService = () => {
@@ -273,6 +298,7 @@ const CadastroBarbearia = () => {
         horario_fechamento: horariosIguais ? (form.horario_fechamento || null) : 'Vários',
         horarios_por_dia: finalHorarios,
         barbeiros_nomes: (form.barbeiros_nomes || []).filter((name) => name.trim() !== ''),
+        servicos_detalhes: form.servicos_detalhes || {},
         observacoes: form.observacoes || null,
         nota_interna: null,
       });
@@ -759,8 +785,9 @@ const CadastroBarbearia = () => {
 
                   {/* Serviços de interesse */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-dark-200 mb-3">Serviços Oferecidos</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="block text-sm font-semibold text-dark-200 mb-1">Serviços Oferecidos</label>
+                    <p className="text-xs text-dark-500 mb-3">Selecione os serviços e informe o valor e o tempo de duração de cada um.</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
                       {[...SERVICOS, ...customServicesList].map((s) => (
                         <button
                           key={s}
@@ -778,7 +805,7 @@ const CadastroBarbearia = () => {
                     </div>
 
                     {/* Input de serviços customizados */}
-                    <div className="mt-4 flex gap-2 max-w-sm">
+                    <div className="mb-4 flex gap-2 max-w-sm">
                       <input
                         type="text"
                         placeholder="Outro serviço (Ex: Luzes, Selagem...)"
@@ -800,6 +827,49 @@ const CadastroBarbearia = () => {
                         Adicionar
                       </button>
                     </div>
+
+                    {/* Detalhes de valor e duração por serviço selecionado */}
+                    {form.servicos_interesse.length > 0 && (
+                      <div className="p-4 bg-dark-900/40 border border-amber-500/20 rounded-2xl space-y-3 animate-fade-in">
+                        <p className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <DollarSign size={12} />
+                          Valor e Duração dos Serviços Selecionados
+                        </p>
+                        <div className="grid grid-cols-1 gap-3">
+                          {form.servicos_interesse.map((servico) => (
+                            <div key={servico} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 bg-dark-800/60 border border-dark-700/50 rounded-xl">
+                              <span className="text-xs font-bold text-white min-w-[120px] shrink-0">{servico}</span>
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="relative flex-1">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-xs font-bold">R$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0,00"
+                                    value={form.servicos_detalhes?.[servico]?.valor || ''}
+                                    onChange={(e) => updateServicoDetalhe(servico, 'valor', e.target.value)}
+                                    className="w-full bg-dark-700 border border-dark-600 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
+                                  />
+                                </div>
+                                <div className="relative flex-1">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <Clock size={12} className="text-dark-500" />
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder="Ex: 30min, 1h"
+                                    value={form.servicos_detalhes?.[servico]?.duracao || ''}
+                                    onChange={(e) => updateServicoDetalhe(servico, 'duracao', e.target.value)}
+                                    className="w-full bg-dark-700 border border-dark-600 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Como conheceu */}

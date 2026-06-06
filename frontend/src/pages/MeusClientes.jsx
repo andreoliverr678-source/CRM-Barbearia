@@ -493,11 +493,41 @@ const MeusClientes = () => {
               {selected.servicos_interesse?.length > 0 && (
                 <div>
                   <label className="block text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">Serviços</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selected.servicos_interesse.map((s) => (
-                      <span key={s} className="px-3 py-1 rounded-lg text-xs font-semibold bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20">{s}</span>
-                    ))}
-                  </div>
+                  {selected.servicos_detalhes && Object.keys(selected.servicos_detalhes).length > 0 ? (
+                    <div className="overflow-hidden rounded-xl border border-dark-200 dark:border-dark-700">
+                      <table className="w-full text-sm">
+                        <thead className="bg-dark-50 dark:bg-dark-800">
+                          <tr>
+                            <th className="text-left px-3 py-2 text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider">Serviço</th>
+                            <th className="text-center px-3 py-2 text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider">Valor</th>
+                            <th className="text-center px-3 py-2 text-xs font-bold text-dark-500 dark:text-dark-400 uppercase tracking-wider">Duração</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-dark-100 dark:divide-dark-700">
+                          {selected.servicos_interesse.map((s) => {
+                            const det = selected.servicos_detalhes?.[s];
+                            return (
+                              <tr key={s} className="bg-white dark:bg-dark-900 hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors">
+                                <td className="px-3 py-2 text-xs font-semibold text-dark-800 dark:text-dark-100">{s}</td>
+                                <td className="px-3 py-2 text-center text-xs text-green-600 dark:text-green-400 font-bold">
+                                  {det?.valor ? `R$ ${parseFloat(det.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-center text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                  {det?.duracao || '—'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.servicos_interesse.map((s) => (
+                        <span key={s} className="px-3 py-1 rounded-lg text-xs font-semibold bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20">{s}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
